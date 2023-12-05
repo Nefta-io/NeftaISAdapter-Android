@@ -56,7 +56,7 @@ public class DemoActivity extends Activity implements RewardedVideoListener, Off
         //Network Connectivity Status
         IronSource.shouldTrackNetworkState(this, true);
 
-        //NeftaPlugin.Init(getApplicationContext(), "5667525748588544");
+        //NeftaPlugin.Init(getApplicationContext(), "5070114386870272");
 
         /*NeftaPlugin.Events.AddProgressionEvent(
                 NeftaEvents.ProgressionStatus.START,
