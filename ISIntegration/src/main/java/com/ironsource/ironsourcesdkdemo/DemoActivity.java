@@ -26,6 +26,7 @@ import com.ironsource.mediationsdk.sdk.InterstitialListener;
 import com.ironsource.mediationsdk.sdk.OfferwallListener;
 import com.ironsource.mediationsdk.sdk.RewardedVideoListener;
 import com.ironsource.mediationsdk.utils.IronSourceUtils;
+import com.nefta.sdk.NeftaEvents;
 import com.nefta.sdk.NeftaPlugin;
 
 public class DemoActivity extends Activity implements RewardedVideoListener, OfferwallListener, InterstitialListener, ImpressionDataListener {
@@ -56,15 +57,17 @@ public class DemoActivity extends Activity implements RewardedVideoListener, Off
         //Network Connectivity Status
         IronSource.shouldTrackNetworkState(this, true);
 
-        //NeftaPlugin.Init(getApplicationContext(), "5070114386870272");
+        /*
+        NeftaPlugin.Init(getApplicationContext(), "5630785994358784");
 
-        /*NeftaPlugin.Events.AddProgressionEvent(
-                NeftaEvents.ProgressionStatus.START,
-                NeftaEvents.ProgressionType.TASK,
-                NeftaEvents.ProgressionSource.OPTIONAL_CONTENT,
+        NeftaPlugin.Events.AddProgressionEvent(
+                NeftaEvents.ProgressionStatus.Start,
+                NeftaEvents.ProgressionType.Task,
+                NeftaEvents.ProgressionSource.OptionalContent,
                 "daily2",
-                3,
-                null);*/
+                3L,
+                null);
+        */
     }
     private void startIronSourceInitTask(){
         String advertisingId = IronSource.getAdvertiserId(DemoActivity.this);
