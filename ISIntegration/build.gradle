@@ -28,6 +28,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-ads-identifier:18.0.1'
     implementation 'androidx.cardview:cardview:1.0.0'
     //Add IronSource Mediation SDK dependency.
-    implementation files('libs/NeftaCustomAdapter-debug-1.2.0.aar')
+    implementation 'com.google.guava:guava:30.1-jre'
+    implementation files('libs/NeftaCustomAdapter-debug-1.2.1.aar')
     implementation 'com.ironsource.sdk:mediationsdk:7.8.0'
 }
