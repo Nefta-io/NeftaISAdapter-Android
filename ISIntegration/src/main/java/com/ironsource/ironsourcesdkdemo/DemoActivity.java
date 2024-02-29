@@ -58,7 +58,8 @@ public class DemoActivity extends Activity implements RewardedVideoListener, Off
         IronSource.shouldTrackNetworkState(this, true);
 
         /*
-        NeftaPlugin.Init(getApplicationContext(), "5630785994358784");
+        Example for intergrating custom events:
+        NeftaPlugin.Init(getApplicationContext(), "5643649824063488");
 
         NeftaPlugin.Events.AddProgressionEvent(
                 NeftaEvents.ProgressionStatus.Start,
@@ -66,8 +67,7 @@ public class DemoActivity extends Activity implements RewardedVideoListener, Off
                 NeftaEvents.ProgressionSource.OptionalContent,
                 "daily2",
                 3L,
-                null);
-        */
+                null);*/
     }
     private void startIronSourceInitTask(){
         String advertisingId = IronSource.getAdvertiserId(DemoActivity.this);
