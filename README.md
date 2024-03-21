@@ -1,5 +1,5 @@
 # NeftaISAdapter-Android
 
-Nefta SDK Nefta Ad Network and example integration project.
+Nefta Custom adapter for IronSource SDK.
 
-Complete integration guide: https://docs-adnetwork.nefta.io/docs/ironsource-android
+Complete integration guide: https://docs.nefta.io/docs/ironsource-android
