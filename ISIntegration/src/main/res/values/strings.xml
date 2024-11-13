@@ -1,20 +1,3 @@
 <resources>
-    <string name="app_name">Integration Demo</string>
-    <string name="initializing">Initializing…</string>
-
-    <string name="show">Show</string>
-    <string name="load">Load</string>
-    <string name="destroy">Destroy</string>
-
-    <string name="version">sdk version</string>
-
-    <string name="rewarded_video">Rewarded Video</string>
-    <string name="interstitial">Interstitial</string>
-    <string name="banner">Banner</string>
-
-    <string name="rewarded_dialog_header">Video Rewarded</string>
-    <string name="rewarded_dialog_message">You have been rewarded</string>
-    <string name="rvButtonState">rvButtonState</string>
-    <string name="isButtonState">isButtonState</string>
-    <string name="close">Close</string>
+    <string name="app_name">IS Integration</string>
 </resources>

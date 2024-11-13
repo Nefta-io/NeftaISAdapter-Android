@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'com.ironsource.ironsourcesdkdemo'
+    namespace 'com.nefta.is'
     compileSdkVersion 34
     defaultConfig {
         applicationId "com.nefta.is"
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "2.0.0"
         multiDexEnabled = true
     }
     buildTypes {
@@ -27,9 +27,48 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.3.1'
     implementation 'com.google.android.gms:play-services-ads-identifier:18.0.1'
     implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     //Add IronSource Mediation SDK dependency.
     implementation 'com.ironsource.sdk:mediationsdk:8.0.0'
 
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation files('libs/NeftaCustomAdapter-debug.aar')
+implementation files('libs/NeftaCustomAdapter-debug.aar')
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
