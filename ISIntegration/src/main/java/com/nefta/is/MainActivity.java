@@ -4,12 +4,19 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.multidex.BuildConfig;
 import com.ironsource.mediationsdk.IronSource;
 import com.ironsource.mediationsdk.integration.IntegrationHelper;
 import com.ironsource.mediationsdk.sdk.InitializationListener;
 import com.nefta.sdk.NeftaPlugin;
+import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
+import com.unity3d.mediation.LevelPlay;
+import com.unity3d.mediation.LevelPlayConfiguration;
+import com.unity3d.mediation.LevelPlayInitError;
+import com.unity3d.mediation.LevelPlayInitListener;
+import com.unity3d.mediation.LevelPlayInitRequest;
 
 public class MainActivity extends AppCompatActivity implements InitializationListener {
 
@@ -22,17 +29,29 @@ public class MainActivity extends AppCompatActivity implements InitializationLis
         super.onCreate( savedInstanceState );
         setContentView( R.layout.activity_main );
 
-        NeftaPlugin.Init(this, "5643649824063488");
+        NeftaPlugin.EnableLogging(true);
+        NeftaCustomAdapter.Init(MainActivity.this, "5643649824063488");
 
         _status = findViewById(R.id.status);
-
-        IronSource.setUserId("test123");
 
         new BannerWrapper(this, findViewById(R.id.bannerView), findViewById(R.id.showBanner), findViewById(R.id.closeBanner));
         new InterstitialWrapper(this, findViewById(R.id.loadInterstitial), findViewById(R.id.showInterstitial));
         new RewardedWrapper(this, findViewById(R.id.loadRewardedVideo), findViewById(R.id.showRewardedVideo));
 
-        IronSource.init(this, _appId, IronSource.AD_UNIT.BANNER, IronSource.AD_UNIT.INTERSTITIAL, IronSource.AD_UNIT.REWARDED_VIDEO);
+        LevelPlayInitRequest initRequest = new LevelPlayInitRequest.Builder(_appId)
+                .withUserId("user123")
+                .build();
+        LevelPlayInitListener initListener = new LevelPlayInitListener() {
+            @Override
+            public void onInitFailed(@NonNull LevelPlayInitError error) {
+                Log("OnInitFailed "+ error);
+            }
+            @Override
+            public void onInitSuccess(LevelPlayConfiguration configuration) {
+                Log("OnInitSuccess "+ configuration);
+            }
+        };
+        LevelPlay.init(this, initRequest, initListener);
 
         if (BuildConfig.DEBUG){
             IntegrationHelper.validateIntegration(this);

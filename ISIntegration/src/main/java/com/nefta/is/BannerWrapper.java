@@ -2,26 +2,25 @@ package com.nefta.is;
 
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 
-import com.ironsource.mediationsdk.ISBannerSize;
-import com.ironsource.mediationsdk.IronSource;
-import com.ironsource.mediationsdk.IronSourceBannerLayout;
-import com.ironsource.mediationsdk.adunit.adapter.utility.AdInfo;
-import com.ironsource.mediationsdk.impressionData.ImpressionData;
-import com.ironsource.mediationsdk.impressionData.ImpressionDataListener;
-import com.ironsource.mediationsdk.logger.IronSourceError;
-import com.ironsource.mediationsdk.sdk.LevelPlayBannerListener;
+import androidx.annotation.NonNull;
 
-public class BannerWrapper implements LevelPlayBannerListener, ImpressionDataListener {
+import com.unity3d.mediation.LevelPlayAdError;
+import com.unity3d.mediation.LevelPlayAdInfo;
+import com.unity3d.mediation.banner.LevelPlayBannerAdView;
+import com.unity3d.mediation.banner.LevelPlayBannerAdViewListener;
+
+public class BannerWrapper implements LevelPlayBannerAdViewListener {
     private MainActivity _activity;
     private ViewGroup _bannerGroup;
     private Button _loadAndShowButton;
     private Button _closeButton;
-    private IronSourceBannerLayout _banner;
+    private LevelPlayBannerAdView _banner;
 
     public BannerWrapper(MainActivity activity, ViewGroup bannerGroup, Button loadAndShowButton, Button closeButton) {
         _activity = activity;
@@ -29,22 +28,16 @@ public class BannerWrapper implements LevelPlayBannerListener, ImpressionDataLis
         _loadAndShowButton = loadAndShowButton;
         _closeButton = closeButton;
 
-        IronSource.addImpressionDataListener(this);
-
         _loadAndShowButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                _banner = IronSource.createBanner(_activity, ISBannerSize.BANNER);
-                if (_banner != null) {
-                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT);
-                    bannerGroup.addView(_banner, 0, layoutParams);
-                    _banner.setLevelPlayBannerListener(BannerWrapper.this);
+                Log("Load");
+                _banner = new LevelPlayBannerAdView(activity, "vpkt794d6ruyfwr4");
+                bannerGroup.addView(_banner);
+                _banner.setBannerListener(BannerWrapper.this);
 
-                    Log("Load");
-                    IronSource.loadBanner(_banner);
-                } else {
-                    Log("IronSource.createBanner returned null");
-                }
+
+                _banner.loadAd();
 
                 _loadAndShowButton.setEnabled(false);
             }
@@ -53,8 +46,9 @@ public class BannerWrapper implements LevelPlayBannerListener, ImpressionDataLis
             @Override
             public void onClick(View v) {
                 Log("Close");
-                IronSource.destroyBanner(_banner);
+                _banner.destroy();
                 _bannerGroup.removeView(_banner);
+                _banner = null;
 
                 _loadAndShowButton.setEnabled(true);
                 _closeButton.setEnabled(false);
@@ -65,46 +59,51 @@ public class BannerWrapper implements LevelPlayBannerListener, ImpressionDataLis
     }
 
     @Override
-    public void onAdLoaded(AdInfo adInfo) {
+    public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdLoaded " + adInfo);
 
         _closeButton.setEnabled(true);
     }
 
     @Override
-    public void onAdLoadFailed(IronSourceError ironSourceError) {
-        Log("onAdLoadFailed " + ironSourceError);
+    public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
+        Log("onAdLoadFailed " + error);
 
         _loadAndShowButton.setEnabled(true);
         _closeButton.setEnabled(false);
     }
 
     @Override
-    public void onAdClicked(AdInfo adInfo) {
+    public void onAdDisplayFailed(@NonNull LevelPlayAdInfo adInfo, @NonNull LevelPlayAdError error) {
+        Log("onAdDisplayFailed " + adInfo + " error: "+ error);
+    }
+
+    @Override
+    public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdDisplayed " + adInfo);
+    }
+
+    @Override
+    public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdClicked " + adInfo);
     }
 
     @Override
-    public void onAdLeftApplication(AdInfo adInfo) {
+    public void onAdLeftApplication(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdLeftApplication " + adInfo);
     }
 
     @Override
-    public void onAdScreenPresented(AdInfo adInfo) {
+    public void onAdExpanded(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdScreenPresented " + adInfo);
     }
 
     @Override
-    public void onAdScreenDismissed(AdInfo adInfo) {
+    public void onAdCollapsed(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdScreenDismissed " + adInfo);
 
         _loadAndShowButton.setEnabled(true);
         _closeButton.setEnabled(false);
-    }
-
-    @Override
-    public void onImpressionSuccess(ImpressionData impressionData) {
-        Log("onImpressionSuccess " + impressionData);
     }
 
     private void Log(String message) {

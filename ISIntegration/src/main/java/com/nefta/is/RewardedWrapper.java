@@ -1,46 +1,44 @@
 package com.nefta.is;
 
 import android.app.AlertDialog;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
-import com.ironsource.mediationsdk.IronSource;
-import com.ironsource.mediationsdk.adunit.adapter.utility.AdInfo;
-import com.ironsource.mediationsdk.impressionData.ImpressionData;
-import com.ironsource.mediationsdk.impressionData.ImpressionDataListener;
-import com.ironsource.mediationsdk.logger.IronSourceError;
-import com.ironsource.mediationsdk.model.Placement;
-import com.ironsource.mediationsdk.sdk.LevelPlayRewardedVideoManualListener;
+import androidx.annotation.NonNull;
 
-public class RewardedWrapper implements LevelPlayRewardedVideoManualListener, ImpressionDataListener {
-    private final String TAG = "REWARDED";
+import com.unity3d.mediation.LevelPlayAdError;
+import com.unity3d.mediation.LevelPlayAdInfo;
+import com.unity3d.mediation.rewarded.LevelPlayReward;
+import com.unity3d.mediation.rewarded.LevelPlayRewardedAd;
+import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener;
+
+public class RewardedWrapper implements LevelPlayRewardedAdListener {
     private MainActivity _activity;
     private Button _loadButton;
     private Button _showButton;
-    private Placement _rewardedVideoPlacementInfo;
+    private LevelPlayRewardedAd _rewarded;
+    private LevelPlayReward _reward;
 
     public RewardedWrapper(MainActivity activity, Button loadButton, Button showButton) {
         _activity = activity;
         _loadButton = loadButton;
         _showButton = showButton;
 
-        IronSource.addImpressionDataListener(this);
-        IronSource.setLevelPlayRewardedVideoManualListener(RewardedWrapper.this);
-
         _loadButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log("Load");
-                IronSource.loadRewardedVideo();
+                _rewarded = new LevelPlayRewardedAd("kftiv52431x91zuk");
+                _rewarded.setListener(RewardedWrapper.this);
+                _rewarded.loadAd();
             }
         });
         _showButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (IronSource.isRewardedVideoAvailable()) {
+                if (_rewarded.isAdReady()) {
                     Log("Show");
-                    IronSource.showRewardedVideo();
+                    _rewarded.showAd(_activity);
                 } else {
                     Log("Not available");
                 }
@@ -53,60 +51,60 @@ public class RewardedWrapper implements LevelPlayRewardedVideoManualListener, Im
     }
 
     @Override
-    public void onAdReady(AdInfo adInfo) {
-        Log("onAdReady " + adInfo);
+    public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdLoaded " + adInfo);
         _showButton.setEnabled(true);
     }
 
     @Override
-    public void onAdLoadFailed(IronSourceError ironSourceError) {
-        Log("onAdLoadFailed");
+    public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
+        Log("onAdLoadFailed: "+ error);
         _showButton.setEnabled(false);
     }
 
     @Override
-    public void onAdOpened(AdInfo adInfo) {
-        Log("onAdOpened " + adInfo);
+    public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdDisplayed " + adInfo);
     }
 
     @Override
-    public void onAdShowFailed(IronSourceError error, AdInfo adInfo) {
-        Log("onAdShowFailed " + adInfo + " : " + error);
+    public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdDisplayFailed " + adInfo + " : " + error);
     }
 
     @Override
-    public void onAdClicked(Placement placement, AdInfo adInfo) {
-        Log("onAdClicked = " + placement + ": " + adInfo);
+    public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdClicked: " + adInfo);
     }
 
     @Override
-    public void onAdRewarded(Placement placement, AdInfo adInfo) {
-        Log("onAdRewarded = " + placement + ": = " + adInfo);
-        _rewardedVideoPlacementInfo = placement;
+    public void onAdRewarded(@NonNull LevelPlayReward reward, @NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdRewarded "+ adInfo + ": "+ reward);
+        _reward = reward;
     }
 
     @Override
-    public void onAdClosed(AdInfo adInfo) {
+    public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdClosed " + adInfo);
         ShowRewardDialog();
     }
 
     @Override
-    public void onImpressionSuccess(ImpressionData impressionData) {
-        Log.i(TAG, "onImpression: " + impressionData);
+    public void onAdInfoChanged(@NonNull LevelPlayAdInfo adInfo) {
+
     }
 
     private void ShowRewardDialog() {
-        if (_rewardedVideoPlacementInfo != null) {
+        if (_reward != null) {
             new AlertDialog.Builder(_activity)
                     .setPositiveButton("ok", (dialog, id) -> dialog.dismiss())
                     .setTitle("Rewarded")
-                    .setMessage("Reward: " + _rewardedVideoPlacementInfo.getRewardAmount() + " " + _rewardedVideoPlacementInfo.getRewardName())
+                    .setMessage("Reward: " + _reward.getName() + " " + _reward.getAmount())
                     .setCancelable(false)
                     .create()
                     .show();
 
-            _rewardedVideoPlacementInfo = null;
+            _reward = null;
         }
     }
 

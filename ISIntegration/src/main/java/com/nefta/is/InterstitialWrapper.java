@@ -9,33 +9,37 @@ import com.ironsource.mediationsdk.impressionData.ImpressionData;
 import com.ironsource.mediationsdk.impressionData.ImpressionDataListener;
 import com.ironsource.mediationsdk.logger.IronSourceError;
 import com.ironsource.mediationsdk.sdk.LevelPlayInterstitialListener;
+import com.unity3d.mediation.LevelPlayAdError;
+import com.unity3d.mediation.LevelPlayAdInfo;
+import com.unity3d.mediation.interstitial.LevelPlayInterstitialAd;
+import com.unity3d.mediation.interstitial.LevelPlayInterstitialAdListener;
 
-public class InterstitialWrapper implements LevelPlayInterstitialListener, ImpressionDataListener {
+public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
     private MainActivity _activity;
     private Button _loadButton;
     private Button _showButton;
+    private LevelPlayInterstitialAd _interstitial;
 
     public InterstitialWrapper(MainActivity activity, Button loadButton, Button showButton) {
         _activity = activity;
         _loadButton = loadButton;
         _showButton = showButton;
 
-        IronSource.addImpressionDataListener(this);
-        IronSource.setLevelPlayInterstitialListener(InterstitialWrapper.this);
-
         _loadButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log("Load");
-                IronSource.loadInterstitial();
+                _interstitial = new LevelPlayInterstitialAd("wrzl86if1sqfxquc");
+                _interstitial.setListener(InterstitialWrapper.this);
+                _interstitial.loadAd();
             }
         });
         _showButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (IronSource.isInterstitialReady()) {
+                if (_interstitial.isAdReady()) {
                     Log("Show");
-                    IronSource.showInterstitial();
+                    _interstitial.showAd(_activity);
                 } else {
                     Log("Not ready");
                 }
@@ -48,46 +52,42 @@ public class InterstitialWrapper implements LevelPlayInterstitialListener, Impre
     }
 
     @Override
-    public void onAdReady(AdInfo adInfo) {
-        Log("onAdReady " + adInfo);
+    public void onAdLoaded(LevelPlayAdInfo levelPlayAdInfo) {
+        Log("onAdLoaded " + levelPlayAdInfo);
         _showButton.setEnabled(true);
     }
 
     @Override
-    public void onAdLoadFailed(IronSourceError error) {
-        Log("onAdLoadFailed " + error);
+    public void onAdLoadFailed(LevelPlayAdError levelPlayAdError) {
+        Log("onAdLoadFailed " + levelPlayAdError);
     }
 
     @Override
-    public void onAdOpened(AdInfo adInfo) {
-        Log("onAdOpened " + adInfo);
+    public void onAdDisplayFailed(LevelPlayAdError levelPlayAdError, LevelPlayAdInfo levelPlayAdInfo) {
+        Log("onAdDisplayFailed = " + levelPlayAdInfo + ": " + levelPlayAdError);
+    }
+
+    @Override
+    public void onAdDisplayed(LevelPlayAdInfo levelPlayAdInfo) {
+        Log("onAdDisplayed " + levelPlayAdInfo);
 
     }
 
     @Override
-    public void onAdShowSucceeded(AdInfo adInfo) {
-        Log("onAdShowSucceeded = " + adInfo);
+    public void onAdClicked(LevelPlayAdInfo levelPlayAdInfo) {
+        Log("onAdClicked " + levelPlayAdInfo);
     }
 
     @Override
-    public void onAdShowFailed(IronSourceError error, AdInfo adInfo) {
-        Log("onAdShowFailed = " + adInfo + ": " + error);
+    public void onAdClosed(LevelPlayAdInfo levelPlayAdInfo) {
+        Log("onAdClosed " + levelPlayAdInfo);
     }
 
     @Override
-    public void onAdClicked(AdInfo adInfo) {
-        Log("onAdClicked " + adInfo);
+    public void onAdInfoChanged(LevelPlayAdInfo levelPlayAdInfo) {
+        Log("onAdInfoChanged " + levelPlayAdInfo);
     }
 
-    @Override
-    public void onAdClosed(AdInfo adInfo) {
-        Log("onAdClosed " + adInfo);
-    }
-
-    @Override
-    public void onImpressionSuccess(ImpressionData impressionData) {
-        Log("onImpression: " + impressionData);
-    }
 
     void Log(String log) {
         _activity.Log("Interstitial " + log);
