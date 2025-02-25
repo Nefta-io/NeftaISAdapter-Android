@@ -2,14 +2,19 @@ package com.nefta.is;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.CompoundButton;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.multidex.BuildConfig;
 import com.ironsource.mediationsdk.IronSource;
+import com.ironsource.mediationsdk.IronSourceSegment;
+import com.ironsource.mediationsdk.WaterfallConfiguration;
 import com.ironsource.mediationsdk.integration.IntegrationHelper;
-import com.ironsource.mediationsdk.sdk.InitializationListener;
+import com.ironsource.mediationsdk.sdk.SegmentListener;
+import com.nefta.sdk.Insight;
 import com.nefta.sdk.NeftaPlugin;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.unity3d.mediation.LevelPlay;
@@ -18,8 +23,11 @@ import com.unity3d.mediation.LevelPlayInitError;
 import com.unity3d.mediation.LevelPlayInitListener;
 import com.unity3d.mediation.LevelPlayInitRequest;
 
-public class MainActivity extends AppCompatActivity implements InitializationListener {
+import java.util.HashMap;
 
+public class MainActivity extends AppCompatActivity implements SegmentListener {
+
+    private final String _tag = "IronSourceIntegration";
     private final String _appId = "1bb635bc5";
 
     private TextView _status;
@@ -31,6 +39,10 @@ public class MainActivity extends AppCompatActivity implements InitializationLis
 
         NeftaPlugin.EnableLogging(true);
         NeftaCustomAdapter.Init(MainActivity.this, "5643649824063488");
+        NeftaPlugin._instance.GetBehaviourInsight(new String[] {
+                "p_churn_14d", "pred_total_value", "pred_ecpm_banner"
+        });
+        NeftaPlugin._instance.OnBehaviourInsight = this::OnBehaviourInsight;
 
         _status = findViewById(R.id.status);
 
@@ -51,16 +63,41 @@ public class MainActivity extends AppCompatActivity implements InitializationLis
                 Log("OnInitSuccess "+ configuration);
             }
         };
+        IronSource.setSegmentListener(MainActivity.this);
         LevelPlay.init(this, initRequest, initListener);
 
         if (BuildConfig.DEBUG){
             IntegrationHelper.validateIntegration(this);
         }
+
+        ((ToggleButton)findViewById(R.id.demand)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isIs) {
+                IronSourceSegment segment = new IronSourceSegment();
+                if (isIs) {
+                    segment.setSegmentName("is");
+                }
+                IronSource.setSegment(segment);
+            }
+        });
     }
 
-    @Override
-    public void onInitializationComplete() {
-        Log("onInitializationComplete");
+    private void OnBehaviourInsight(HashMap<String, Insight> insights) {
+        double pred_total_value = insights.get("pred_total_value")._float;
+        double pred_ecpm_banner = insights.get("pred_ecpm_banner")._float;
+        double user_value_spread = pred_total_value - pred_ecpm_banner;
+
+        if (user_value_spread > 0) {
+            double bid_floor_price = pred_ecpm_banner + user_value_spread;
+
+            WaterfallConfiguration configuration = WaterfallConfiguration.builder().setCeiling(40).setFloor(30).build();
+            IronSource.setWaterfallConfiguration(configuration, IronSource.AD_UNIT.BANNER);
+            Log.i(_tag, "Insight price: "+ bid_floor_price);
+        }
+    }
+
+    public void onSegmentReceived(String segment) {
+        Log.i(_tag, "onSegmentReceived: "+ segment);
     }
 
     @Override
@@ -77,6 +114,6 @@ public class MainActivity extends AppCompatActivity implements InitializationLis
 
     void Log(String log) {
         _status.setText(log);
-        Log.i("IronSourceIntegration", log);
+        Log.i(_tag, log);
     }
 }

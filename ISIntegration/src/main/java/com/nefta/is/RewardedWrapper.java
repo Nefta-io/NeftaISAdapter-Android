@@ -6,6 +6,7 @@ import android.widget.Button;
 
 import androidx.annotation.NonNull;
 
+import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.unity3d.mediation.LevelPlayAdError;
 import com.unity3d.mediation.LevelPlayAdInfo;
 import com.unity3d.mediation.rewarded.LevelPlayReward;
@@ -54,12 +55,16 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
     public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdLoaded " + adInfo);
         _showButton.setEnabled(true);
+
+        NeftaCustomAdapter.OnExternalAdLoad(NeftaCustomAdapter.AdType.Rewarded, 0.6);
     }
 
     @Override
     public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
         Log("onAdLoadFailed: "+ error);
         _showButton.setEnabled(false);
+
+        NeftaCustomAdapter.OnExternalAdFail(NeftaCustomAdapter.AdType.Rewarded, 0.2, error);
     }
 
     @Override

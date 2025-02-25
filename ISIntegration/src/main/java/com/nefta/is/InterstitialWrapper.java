@@ -3,6 +3,9 @@ package com.nefta.is;
 import android.view.View;
 import android.widget.Button;
 
+import androidx.annotation.NonNull;
+
+import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.ironsource.mediationsdk.IronSource;
 import com.ironsource.mediationsdk.adunit.adapter.utility.AdInfo;
 import com.ironsource.mediationsdk.impressionData.ImpressionData;
@@ -52,39 +55,43 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
     }
 
     @Override
-    public void onAdLoaded(LevelPlayAdInfo levelPlayAdInfo) {
-        Log("onAdLoaded " + levelPlayAdInfo);
+    public void onAdLoaded(@NonNull LevelPlayAdInfo info) {
+        Log("onAdLoaded " + info);
         _showButton.setEnabled(true);
+
+        NeftaCustomAdapter.OnExternalAdLoad(NeftaCustomAdapter.AdType.Interstitial,  0.4);
     }
 
     @Override
-    public void onAdLoadFailed(LevelPlayAdError levelPlayAdError) {
-        Log("onAdLoadFailed " + levelPlayAdError);
+    public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
+        Log("onAdLoadFailed " + error);
+
+        NeftaCustomAdapter.OnExternalAdFail(NeftaCustomAdapter.AdType.Interstitial,0.6, error);
     }
 
     @Override
-    public void onAdDisplayFailed(LevelPlayAdError levelPlayAdError, LevelPlayAdInfo levelPlayAdInfo) {
-        Log("onAdDisplayFailed = " + levelPlayAdInfo + ": " + levelPlayAdError);
+    public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo info) {
+        Log("onAdDisplayFailed = " + info + ": " + error);
     }
 
     @Override
-    public void onAdDisplayed(LevelPlayAdInfo levelPlayAdInfo) {
+    public void onAdDisplayed(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
         Log("onAdDisplayed " + levelPlayAdInfo);
 
     }
 
     @Override
-    public void onAdClicked(LevelPlayAdInfo levelPlayAdInfo) {
+    public void onAdClicked(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
         Log("onAdClicked " + levelPlayAdInfo);
     }
 
     @Override
-    public void onAdClosed(LevelPlayAdInfo levelPlayAdInfo) {
+    public void onAdClosed(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
         Log("onAdClosed " + levelPlayAdInfo);
     }
 
     @Override
-    public void onAdInfoChanged(LevelPlayAdInfo levelPlayAdInfo) {
+    public void onAdInfoChanged(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
         Log("onAdInfoChanged " + levelPlayAdInfo);
     }
 

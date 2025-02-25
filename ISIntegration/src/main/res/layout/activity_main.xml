@@ -7,7 +7,7 @@
 
     <FrameLayout
         android:id="@+id/frameLayout"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_marginStart="40dp"
         android:layout_marginEnd="40dp"
@@ -37,6 +37,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:translationY="100dp">
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <ToggleButton
+                    android:id="@+id/demand"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Demand"
+                    android:textOff="Nefta"
+                    android:textOn="IS" />
+            </TableRow>
 
             <TableRow
                 android:layout_width="match_parent"
@@ -113,16 +126,21 @@
                     android:textColor="#000000" />
             </TableRow>
 
-        </TableLayout>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
-        <TextView
-            android:id="@+id/status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:height="200dp"
-            android:text="Status"
-            android:textColor="#000000"
-            android:translationY="300dp" />
+                <TextView
+                    android:id="@+id/status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_span="2"
+                    android:singleLine="false"
+                    android:text="Initializing.."
+                    android:textColor="#000000" />
+            </TableRow>
+
+        </TableLayout>
 
     </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

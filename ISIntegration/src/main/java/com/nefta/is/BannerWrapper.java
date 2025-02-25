@@ -10,6 +10,7 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 
+import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.unity3d.mediation.LevelPlayAdError;
 import com.unity3d.mediation.LevelPlayAdInfo;
 import com.unity3d.mediation.banner.LevelPlayBannerAdView;
@@ -63,6 +64,8 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
         Log("onAdLoaded " + adInfo);
 
         _closeButton.setEnabled(true);
+
+        NeftaCustomAdapter.OnExternalAdLoad(NeftaCustomAdapter.AdType.Banner, 0.4);
     }
 
     @Override
@@ -71,6 +74,8 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
         _loadAndShowButton.setEnabled(true);
         _closeButton.setEnabled(false);
+
+        NeftaCustomAdapter.OnExternalAdFail(NeftaCustomAdapter.AdType.Banner, 0.4, error);
     }
 
     @Override
