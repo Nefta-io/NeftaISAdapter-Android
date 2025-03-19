@@ -6,12 +6,6 @@ import android.widget.Button;
 import androidx.annotation.NonNull;
 
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
-import com.ironsource.mediationsdk.IronSource;
-import com.ironsource.mediationsdk.adunit.adapter.utility.AdInfo;
-import com.ironsource.mediationsdk.impressionData.ImpressionData;
-import com.ironsource.mediationsdk.impressionData.ImpressionDataListener;
-import com.ironsource.mediationsdk.logger.IronSourceError;
-import com.ironsource.mediationsdk.sdk.LevelPlayInterstitialListener;
 import com.unity3d.mediation.LevelPlayAdError;
 import com.unity3d.mediation.LevelPlayAdInfo;
 import com.unity3d.mediation.interstitial.LevelPlayInterstitialAd;
@@ -51,22 +45,27 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
             }
         });
 
+        _loadButton.setEnabled(false);
         _showButton.setEnabled(false);
     }
 
+    public void OnReady() {
+        _loadButton.setEnabled(true);
+    }
+
     @Override
-    public void onAdLoaded(@NonNull LevelPlayAdInfo info) {
-        Log("onAdLoaded " + info);
+    public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdLoaded " + adInfo);
         _showButton.setEnabled(true);
 
-        NeftaCustomAdapter.OnExternalAdLoad(NeftaCustomAdapter.AdType.Interstitial,  0.4);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Interstitial,  0.4, 0.5, adInfo);
     }
 
     @Override
     public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
         Log("onAdLoadFailed " + error);
 
-        NeftaCustomAdapter.OnExternalAdFail(NeftaCustomAdapter.AdType.Interstitial,0.6, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Interstitial,0.6, 0.7, error);
     }
 
     @Override
@@ -75,24 +74,24 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
     }
 
     @Override
-    public void onAdDisplayed(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
-        Log("onAdDisplayed " + levelPlayAdInfo);
+    public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdDisplayed " + adInfo);
 
     }
 
     @Override
-    public void onAdClicked(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
-        Log("onAdClicked " + levelPlayAdInfo);
+    public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdClicked " + adInfo);
     }
 
     @Override
-    public void onAdClosed(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
-        Log("onAdClosed " + levelPlayAdInfo);
+    public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdClosed " + adInfo);
     }
 
     @Override
-    public void onAdInfoChanged(@NonNull LevelPlayAdInfo levelPlayAdInfo) {
-        Log("onAdInfoChanged " + levelPlayAdInfo);
+    public void onAdInfoChanged(@NonNull LevelPlayAdInfo adInfo) {
+        Log("onAdInfoChanged " + adInfo);
     }
 
 

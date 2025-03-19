@@ -1,12 +1,8 @@
 package com.nefta.is;
 
-import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
-
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 
@@ -56,7 +52,12 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
             }
         });
 
+        _loadAndShowButton.setEnabled(false);
         _closeButton.setEnabled(false);
+    }
+
+    public void OnReady() {
+        _loadAndShowButton.setEnabled(true);
     }
 
     @Override
@@ -65,7 +66,7 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
         _closeButton.setEnabled(true);
 
-        NeftaCustomAdapter.OnExternalAdLoad(NeftaCustomAdapter.AdType.Banner, 0.4);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Banner, 0.3, 0.4, adInfo);
     }
 
     @Override
@@ -75,7 +76,7 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
         _loadAndShowButton.setEnabled(true);
         _closeButton.setEnabled(false);
 
-        NeftaCustomAdapter.OnExternalAdFail(NeftaCustomAdapter.AdType.Banner, 0.4, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Banner, 0.6, 0.7, error);
     }
 
     @Override

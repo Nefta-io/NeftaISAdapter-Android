@@ -48,7 +48,12 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
             }
         });
 
+        _loadButton.setEnabled(false);
         _showButton.setEnabled(false);
+    }
+
+    public void OnReady() {
+        _loadButton.setEnabled(true);
     }
 
     @Override
@@ -56,7 +61,7 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
         Log("onAdLoaded " + adInfo);
         _showButton.setEnabled(true);
 
-        NeftaCustomAdapter.OnExternalAdLoad(NeftaCustomAdapter.AdType.Rewarded, 0.6);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Rewarded, 0.6, 0.7, adInfo);
     }
 
     @Override
@@ -64,7 +69,7 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
         Log("onAdLoadFailed: "+ error);
         _showButton.setEnabled(false);
 
-        NeftaCustomAdapter.OnExternalAdFail(NeftaCustomAdapter.AdType.Rewarded, 0.2, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Rewarded, 0.2, 0.3, error);
     }
 
     @Override

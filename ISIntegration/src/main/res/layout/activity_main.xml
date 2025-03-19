@@ -49,6 +49,12 @@
                     android:text="Demand"
                     android:textOff="Nefta"
                     android:textOn="IS" />
+
+                <Button
+                    android:id="@+id/testSuite"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Test suite" />
             </TableRow>
 
             <TableRow
