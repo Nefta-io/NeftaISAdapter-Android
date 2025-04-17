@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.unity3d.mediation.LevelPlayAdError;
 import com.unity3d.mediation.LevelPlayAdInfo;
+import com.unity3d.mediation.LevelPlayAdSize;
 import com.unity3d.mediation.banner.LevelPlayBannerAdView;
 import com.unity3d.mediation.banner.LevelPlayBannerAdViewListener;
 
@@ -30,9 +31,11 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
             public void onClick(View v) {
                 Log("Load");
                 _banner = new LevelPlayBannerAdView(activity, "vpkt794d6ruyfwr4");
+                LevelPlayAdSize adSize = LevelPlayAdSize.createAdaptiveAdSize(activity);
+                Log("selected t123 size: "+ adSize);
+                _banner.setAdSize(adSize);
                 bannerGroup.addView(_banner);
                 _banner.setBannerListener(BannerWrapper.this);
-
 
                 _banner.loadAd();
 
