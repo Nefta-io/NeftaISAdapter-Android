@@ -1,37 +1,123 @@
 package com.nefta.is;
 
 import android.app.AlertDialog;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 
 import androidx.annotation.NonNull;
 
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
+import com.ironsource.mediationsdk.IronSource;
+import com.ironsource.mediationsdk.WaterfallConfiguration;
+import com.nefta.sdk.Insight;
+import com.nefta.sdk.NeftaPlugin;
 import com.unity3d.mediation.LevelPlayAdError;
 import com.unity3d.mediation.LevelPlayAdInfo;
 import com.unity3d.mediation.rewarded.LevelPlayReward;
 import com.unity3d.mediation.rewarded.LevelPlayRewardedAd;
 import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener;
 
+import java.util.HashMap;
+
 public class RewardedWrapper implements LevelPlayRewardedAdListener {
+
+    private final String FloorPriceInsightName = "calculated_user_floor_price_rewarded";
+
+    private double _bidFloor;
+    private double _calculatedBidFloor;
+    private boolean _isLoadRequested;
+
     private MainActivity _activity;
     private Button _loadButton;
     private Button _showButton;
+    private Handler _handler;
+
     private LevelPlayRewardedAd _rewarded;
     private LevelPlayReward _reward;
+
+    private void GetInsightsAndLoad() {
+        _isLoadRequested = true;
+
+        NeftaPlugin._instance.GetBehaviourInsight(new String[] { FloorPriceInsightName }, this::OnBehaviourInsight);
+
+        _handler.postDelayed(() -> {
+            if (_isLoadRequested) {
+                _calculatedBidFloor = 0;
+                Load();
+            }
+        }, 5000);
+    }
+
+    private void OnBehaviourInsight(HashMap<String, Insight> insights) {
+        _calculatedBidFloor = 0;
+        if (insights.containsKey(FloorPriceInsightName)) {
+            _calculatedBidFloor = insights.get(FloorPriceInsightName)._float;
+        }
+
+        Log("OnBehaviourInsights for Rewarded calculated bid floor: "+ _calculatedBidFloor);
+
+        if (_isLoadRequested) {
+            Load();
+        }
+    }
+
+    private void Load() {
+        _isLoadRequested = false;
+
+        if (_calculatedBidFloor <= 0) {
+            _bidFloor = 0;
+            IronSource.setWaterfallConfiguration(WaterfallConfiguration.empty(), IronSource.AD_UNIT.REWARDED_VIDEO);
+        } else {
+            _bidFloor = _calculatedBidFloor;
+            WaterfallConfiguration.WaterfallConfigurationBuilder builder = WaterfallConfiguration.builder();
+            WaterfallConfiguration waterfallConfiguration = builder
+                    .setFloor(_bidFloor)
+                    .build();
+            IronSource.setWaterfallConfiguration(waterfallConfiguration, IronSource.AD_UNIT.REWARDED_VIDEO);
+        }
+
+        Log("Loading Rewarded with floor: "+ _bidFloor);
+
+        _rewarded = new LevelPlayRewardedAd("kftiv52431x91zuk");
+        _rewarded.setListener(RewardedWrapper.this);
+        _rewarded.loadAd();
+    }
+
+    @Override
+    public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Rewarded, _bidFloor, _calculatedBidFloor, error);
+
+        Log("onAdLoadFailed: "+ error);
+
+        _loadButton.setEnabled(true);
+        _showButton.setEnabled(false);
+
+        // or automatically retry with a delay
+        //_handler.postDelayed(this::GetInsightsAndLoad, 5000);
+    }
+
+    @Override
+    public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Rewarded, _bidFloor, _calculatedBidFloor, adInfo);
+
+        Log("onAdLoaded " + adInfo);
+
+        _showButton.setEnabled(true);
+    }
 
     public RewardedWrapper(MainActivity activity, Button loadButton, Button showButton) {
         _activity = activity;
         _loadButton = loadButton;
         _showButton = showButton;
 
+        _handler = new Handler(Looper.getMainLooper());
+
         _loadButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log("Load");
-                _rewarded = new LevelPlayRewardedAd("kftiv52431x91zuk");
-                _rewarded.setListener(RewardedWrapper.this);
-                _rewarded.loadAd();
+                GetInsightsAndLoad();
             }
         });
         _showButton.setOnClickListener(new View.OnClickListener() {
@@ -54,22 +140,6 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
 
     public void OnReady() {
         _loadButton.setEnabled(true);
-    }
-
-    @Override
-    public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdLoaded " + adInfo);
-        _showButton.setEnabled(true);
-
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Rewarded, 0.6, 0.7, adInfo);
-    }
-
-    @Override
-    public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        Log("onAdLoadFailed: "+ error);
-        _showButton.setEnabled(false);
-
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Rewarded, 0.2, 0.3, error);
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.nefta.is;
 
-import android.app.BackgroundServiceStartNotAllowedException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,7 +13,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.multidex.BuildConfig;
 import com.ironsource.mediationsdk.IronSource;
 import com.ironsource.mediationsdk.IronSourceSegment;
-import com.ironsource.mediationsdk.WaterfallConfiguration;
 import com.ironsource.mediationsdk.impressionData.ImpressionData;
 import com.ironsource.mediationsdk.impressionData.ImpressionDataListener;
 import com.ironsource.mediationsdk.integration.IntegrationHelper;
@@ -55,11 +53,7 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
             }
         }
 
-        NeftaPlugin plugin = NeftaCustomAdapter.Init(MainActivity.this, "5643649824063488");
-        plugin.GetBehaviourInsight(new String[] {
-                "p_churn_14d", "pred_total_value", "pred_ecpm_banner"
-        });
-        plugin.OnBehaviourInsight = this::OnBehaviourInsight;
+        NeftaCustomAdapter.Init(MainActivity.this, "5643649824063488");
 
         _status = findViewById(R.id.status);
 
@@ -110,25 +104,6 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
         });
 
         SetSegment(false);
-    }
-
-    private void OnBehaviourInsight(HashMap<String, Insight> insights) {
-        for (Map.Entry<String, Insight> insight : insights.entrySet()) {
-            Insight insightValue = insight.getValue();
-            Log.i(_tag, "Insight "+ insight.getKey() + " s:"+ insightValue._status + ", i:"+ insightValue._int + " f:"+ insightValue._float + " s:"+ insightValue._string);
-        }
-
-        double pred_total_value = insights.get("pred_total_value")._float;
-        double pred_ecpm_banner = insights.get("pred_ecpm_banner")._float;
-        double user_value_spread = pred_total_value - pred_ecpm_banner;
-
-        if (user_value_spread > 0) {
-            double bid_floor_price = pred_ecpm_banner + user_value_spread;
-
-            WaterfallConfiguration configuration = WaterfallConfiguration.builder().setCeiling(40).setFloor(30).build();
-            IronSource.setWaterfallConfiguration(configuration, IronSource.AD_UNIT.BANNER);
-            Log.i(_tag, "Insight price: "+ bid_floor_price);
-        }
     }
 
     public void onSegmentReceived(String segment) {

@@ -6,8 +6,8 @@ android {
         applicationId "com.nefta.is"
         minSdkVersion 21
         targetSdkVersion 34
-        versionCode 175
-        versionName "2.2.2"
+        versionCode 183
+        versionName "2.2.3"
         multiDexEnabled = true
     }
     buildTypes {
@@ -26,6 +26,6 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     //Add IronSource Mediation SDK dependency.
-    implementation 'com.ironsource.sdk:mediationsdk:8.6.0'
+    implementation 'com.ironsource.sdk:mediationsdk:8.8.0'
     implementation files('libs/NeftaCustomAdapter-release.aar')
 }
