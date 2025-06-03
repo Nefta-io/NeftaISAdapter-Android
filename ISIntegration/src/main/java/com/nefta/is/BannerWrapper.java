@@ -25,7 +25,7 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
     private final String FloorPriceInsightName = "calculated_user_floor_price_banner";
 
-    private double _bidFloor;
+    private double _requestedBidFloor;
     private double _calculatedBidFloor;
     private boolean _isLoadRequested;
 
@@ -67,18 +67,18 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
         _isLoadRequested = false;
 
         if (_calculatedBidFloor <= 0) {
-            _bidFloor = 0;
+            _requestedBidFloor = 0;
             IronSource.setWaterfallConfiguration(WaterfallConfiguration.empty(), IronSource.AD_UNIT.BANNER);
         } else {
-            _bidFloor = _calculatedBidFloor;
+            _requestedBidFloor = _calculatedBidFloor;
             WaterfallConfiguration.WaterfallConfigurationBuilder builder = WaterfallConfiguration.builder();
             WaterfallConfiguration waterfallConfiguration = builder
-                    .setFloor(_bidFloor)
+                    .setFloor(_requestedBidFloor)
                     .build();
             IronSource.setWaterfallConfiguration(waterfallConfiguration, IronSource.AD_UNIT.BANNER);
         }
 
-        Log("Loading Banner with floor: "+ _bidFloor);
+        Log("Loading Banner with floor: "+ _requestedBidFloor);
 
         _banner = new LevelPlayBannerAdView(_activity, "vpkt794d6ruyfwr4");
         _banner.setAdSize(LevelPlayAdSize.createAdaptiveAdSize(_activity));
@@ -90,7 +90,7 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
     @Override
     public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Banner, _bidFloor, _calculatedBidFloor, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Banner, _requestedBidFloor, _calculatedBidFloor, error);
 
         Log("onAdLoadFailed " + error);
 
@@ -100,7 +100,7 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
     @Override
     public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Banner, _bidFloor, _calculatedBidFloor, adInfo);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Banner, _requestedBidFloor, _calculatedBidFloor, adInfo);
 
         Log("onAdLoaded " + adInfo);
     }

@@ -25,7 +25,7 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
 
     private final String FloorPriceInsightName = "calculated_user_floor_price_rewarded";
 
-    private double _bidFloor;
+    private double _requestedBidFoor;
     private double _calculatedBidFloor;
     private boolean _isLoadRequested;
 
@@ -67,18 +67,18 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
         _isLoadRequested = false;
 
         if (_calculatedBidFloor <= 0) {
-            _bidFloor = 0;
+            _requestedBidFoor = 0;
             IronSource.setWaterfallConfiguration(WaterfallConfiguration.empty(), IronSource.AD_UNIT.REWARDED_VIDEO);
         } else {
-            _bidFloor = _calculatedBidFloor;
+            _requestedBidFoor = _calculatedBidFloor;
             WaterfallConfiguration.WaterfallConfigurationBuilder builder = WaterfallConfiguration.builder();
             WaterfallConfiguration waterfallConfiguration = builder
-                    .setFloor(_bidFloor)
+                    .setFloor(_requestedBidFoor)
                     .build();
             IronSource.setWaterfallConfiguration(waterfallConfiguration, IronSource.AD_UNIT.REWARDED_VIDEO);
         }
 
-        Log("Loading Rewarded with floor: "+ _bidFloor);
+        Log("Loading Rewarded with floor: "+ _requestedBidFoor);
 
         _rewarded = new LevelPlayRewardedAd("kftiv52431x91zuk");
         _rewarded.setListener(RewardedWrapper.this);
@@ -87,20 +87,19 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
 
     @Override
     public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Rewarded, _bidFloor, _calculatedBidFloor, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Rewarded, _requestedBidFoor, _calculatedBidFloor, error);
 
         Log("onAdLoadFailed: "+ error);
 
         _loadButton.setEnabled(true);
         _showButton.setEnabled(false);
 
-        // or automatically retry with a delay
-        //_handler.postDelayed(this::GetInsightsAndLoad, 5000);
+        _handler.postDelayed(this::GetInsightsAndLoad, 5000);
     }
 
     @Override
     public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Rewarded, _bidFloor, _calculatedBidFloor, adInfo);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Rewarded, _requestedBidFoor, _calculatedBidFloor, adInfo);
 
         Log("onAdLoaded " + adInfo);
 

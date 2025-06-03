@@ -65,7 +65,6 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
         IronSource.setMetaData("is_deviceid_optout","false");
         IronSource.setMetaData("is_child_directed","false");
         LevelPlayInitRequest initRequest = new LevelPlayInitRequest.Builder(_appId)
-                .withUserId("user123")
                 .build();
         LevelPlayInitListener initListener = new LevelPlayInitListener() {
             @Override

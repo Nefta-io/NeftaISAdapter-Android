@@ -23,7 +23,7 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
 
     private final String FloorPriceInsightName = "calculated_user_floor_price_interstitial";
 
-    private double _bidFloor;
+    private double _requestedBidFloor;
     private double _calculatedBidFloor;
     private boolean _isLoadRequested;
 
@@ -64,18 +64,18 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
         _isLoadRequested = false;
 
         if (_calculatedBidFloor <= 0) {
-            _bidFloor = 0;
+            _requestedBidFloor = 0;
             IronSource.setWaterfallConfiguration(WaterfallConfiguration.empty(), IronSource.AD_UNIT.INTERSTITIAL);
         } else {
-            _bidFloor = _calculatedBidFloor;
+            _requestedBidFloor = _calculatedBidFloor;
             WaterfallConfiguration.WaterfallConfigurationBuilder builder = WaterfallConfiguration.builder();
             WaterfallConfiguration waterfallConfiguration = builder
-                    .setFloor(_bidFloor)
+                    .setFloor(_requestedBidFloor)
                     .build();
             IronSource.setWaterfallConfiguration(waterfallConfiguration, IronSource.AD_UNIT.INTERSTITIAL);
         }
 
-        Log("Loading Interstitial with floor: "+ _bidFloor);
+        Log("Loading Interstitial with floor: "+ _requestedBidFloor);
 
         _interstitial = new LevelPlayInterstitialAd("wrzl86if1sqfxquc");
         _interstitial.setListener(InterstitialWrapper.this);
@@ -84,20 +84,19 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
 
     @Override
     public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Interstitial,_bidFloor, _calculatedBidFloor, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Interstitial, _requestedBidFloor, _calculatedBidFloor, error);
 
         Log("onAdLoadFailed " + error);
 
         _loadButton.setEnabled(true);
         _showButton.setEnabled(false);
-
-        // or automatically retry with a delay
-        //_handler.postDelayed(this::GetInsightsAndLoad, 5000);
+        
+        _handler.postDelayed(this::GetInsightsAndLoad, 5000);
     }
 
     @Override
     public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Interstitial,  _bidFloor, _calculatedBidFloor, adInfo);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Interstitial, _requestedBidFloor, _calculatedBidFloor, adInfo);
 
         Log("onAdLoaded " + adInfo);
 
