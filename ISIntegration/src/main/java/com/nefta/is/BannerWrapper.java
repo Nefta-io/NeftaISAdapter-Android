@@ -9,9 +9,8 @@ import android.widget.Button;
 import androidx.annotation.NonNull;
 
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
-import com.ironsource.mediationsdk.IronSource;
-import com.ironsource.mediationsdk.WaterfallConfiguration;
-import com.nefta.sdk.Insight;
+import com.nefta.sdk.AdInsight;
+import com.nefta.sdk.Insights;
 import com.nefta.sdk.NeftaPlugin;
 import com.unity3d.mediation.LevelPlayAdError;
 import com.unity3d.mediation.LevelPlayAdInfo;
@@ -19,15 +18,7 @@ import com.unity3d.mediation.LevelPlayAdSize;
 import com.unity3d.mediation.banner.LevelPlayBannerAdView;
 import com.unity3d.mediation.banner.LevelPlayBannerAdViewListener;
 
-import java.util.HashMap;
-
 public class BannerWrapper implements LevelPlayBannerAdViewListener {
-
-    private final String FloorPriceInsightName = "calculated_user_floor_price_banner";
-
-    private double _requestedBidFloor;
-    private double _calculatedBidFloor;
-    private boolean _isLoadRequested;
 
     private MainActivity _activity;
     private ViewGroup _bannerGroup;
@@ -36,52 +27,27 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
     private Handler _handler;
 
     private LevelPlayBannerAdView _banner;
+    private AdInsight _usedInsight;
+    private double _requestedFloorPrice;
 
     private void GetInsightsAndLoad() {
-        _isLoadRequested = true;
-
-        NeftaPlugin._instance.GetBehaviourInsight(new String[] { FloorPriceInsightName }, this::OnBehaviourInsight);
-
-        _handler.postDelayed(() -> {
-            if (_isLoadRequested) {
-                _calculatedBidFloor = 0;
-                Load();
-            }
-        }, 5000);
+        NeftaPlugin._instance.GetInsights(Insights.BANNER, this::Load, 5);
     }
 
-    private void OnBehaviourInsight(HashMap<String, Insight> insights) {
-        _calculatedBidFloor = 0;
-        if (insights.containsKey(FloorPriceInsightName)) {
-            _calculatedBidFloor = insights.get(FloorPriceInsightName)._float;
+    private void Load(Insights insights) {
+        _requestedFloorPrice = 0;
+        _usedInsight = insights._banner;
+        if (_usedInsight != null) {
+            _requestedFloorPrice = _usedInsight._floorPrice;
         }
 
-        Log("OnBehaviourInsights for Banner calculated bid floor: "+ _calculatedBidFloor);
+        Log("Loading Banner with floor: "+ _requestedFloorPrice);
 
-        if (_isLoadRequested) {
-            Load();
-        }
-    }
+        LevelPlayBannerAdView.Config config = new LevelPlayBannerAdView.Config.Builder()
+                .setAdSize(LevelPlayAdSize.BANNER)
+                .setBidFloor(_requestedFloorPrice).build();
 
-    private void Load() {
-        _isLoadRequested = false;
-
-        if (_calculatedBidFloor <= 0) {
-            _requestedBidFloor = 0;
-            IronSource.setWaterfallConfiguration(WaterfallConfiguration.empty(), IronSource.AD_UNIT.BANNER);
-        } else {
-            _requestedBidFloor = _calculatedBidFloor;
-            WaterfallConfiguration.WaterfallConfigurationBuilder builder = WaterfallConfiguration.builder();
-            WaterfallConfiguration waterfallConfiguration = builder
-                    .setFloor(_requestedBidFloor)
-                    .build();
-            IronSource.setWaterfallConfiguration(waterfallConfiguration, IronSource.AD_UNIT.BANNER);
-        }
-
-        Log("Loading Banner with floor: "+ _requestedBidFloor);
-
-        _banner = new LevelPlayBannerAdView(_activity, "vpkt794d6ruyfwr4");
-        _banner.setAdSize(LevelPlayAdSize.createAdaptiveAdSize(_activity));
+        _banner = new LevelPlayBannerAdView(_activity, "vpkt794d6ruyfwr4", config);
         _bannerGroup.addView(_banner);
         _banner.setBannerListener(BannerWrapper.this);
 
@@ -90,7 +56,7 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
     @Override
     public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Banner, _requestedBidFloor, _calculatedBidFloor, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Banner, _usedInsight, _requestedFloorPrice, error);
 
         Log("onAdLoadFailed " + error);
 
@@ -100,7 +66,7 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
     @Override
     public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Banner, _requestedBidFloor, _calculatedBidFloor, adInfo);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Banner, _usedInsight, _requestedFloorPrice, adInfo);
 
         Log("onAdLoaded " + adInfo);
     }

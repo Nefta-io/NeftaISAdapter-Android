@@ -17,7 +17,6 @@ import com.ironsource.mediationsdk.impressionData.ImpressionData;
 import com.ironsource.mediationsdk.impressionData.ImpressionDataListener;
 import com.ironsource.mediationsdk.integration.IntegrationHelper;
 import com.ironsource.mediationsdk.sdk.SegmentListener;
-import com.nefta.sdk.Insight;
 import com.nefta.sdk.NeftaPlugin;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.unity3d.mediation.LevelPlay;
@@ -25,9 +24,6 @@ import com.unity3d.mediation.LevelPlayConfiguration;
 import com.unity3d.mediation.LevelPlayInitError;
 import com.unity3d.mediation.LevelPlayInitListener;
 import com.unity3d.mediation.LevelPlayInitRequest;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements SegmentListener, ImpressionDataListener {
 
@@ -53,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
             }
         }
 
-        NeftaCustomAdapter.Init(MainActivity.this, "5643649824063488");
+        NeftaCustomAdapter.Init(MainActivity.this, "5658160027140096");
 
         _status = findViewById(R.id.status);
 
@@ -102,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
             }
         });
 
-        SetSegment(false);
+        SetSegment(true);
     }
 
     public void onSegmentReceived(String segment) {

@@ -40,7 +40,8 @@
                     android:layout_height="wrap_content"
                     android:text="Demand"
                     android:textOff="Nefta"
-                    android:textOn="IS" />
+                    android:textOn="IS"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/testSuite"
