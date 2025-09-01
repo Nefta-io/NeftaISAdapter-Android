@@ -76,7 +76,7 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
         if (_dynamicAdUnitId.equals(error.getAdUnitId())) {
             NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Rewarded, _dynamicAdUnitInsight, _dynamicAdUnitInsight._floorPrice, error);
 
-            Log("onAdLoadFailed Default: "+ error);
+            Log("onAdLoadFailed Dynamic: "+ error);
 
             _dynamicRewarded = null;
             _handler.postDelayed(() -> {
@@ -87,7 +87,7 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
         } else {
             NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Rewarded, null, 0, error);
 
-            Log("onAdLoadFailed Dynamic: "+ error);
+            Log("onAdLoadFailed Default: "+ error);
 
             _defaultRewarded = null;
             _handler.postDelayed(() -> {
