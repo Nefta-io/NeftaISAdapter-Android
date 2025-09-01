@@ -10,13 +10,6 @@ import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.multidex.BuildConfig;
-import com.ironsource.mediationsdk.IronSource;
-import com.ironsource.mediationsdk.IronSourceSegment;
-import com.ironsource.mediationsdk.impressionData.ImpressionData;
-import com.ironsource.mediationsdk.impressionData.ImpressionDataListener;
-import com.ironsource.mediationsdk.integration.IntegrationHelper;
-import com.ironsource.mediationsdk.sdk.SegmentListener;
 import com.nefta.sdk.NeftaPlugin;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.unity3d.mediation.LevelPlay;
@@ -24,10 +17,13 @@ import com.unity3d.mediation.LevelPlayConfiguration;
 import com.unity3d.mediation.LevelPlayInitError;
 import com.unity3d.mediation.LevelPlayInitListener;
 import com.unity3d.mediation.LevelPlayInitRequest;
+import com.unity3d.mediation.impression.LevelPlayImpressionData;
+import com.unity3d.mediation.impression.LevelPlayImpressionDataListener;
+import com.unity3d.mediation.segment.LevelPlaySegment;
 
-public class MainActivity extends AppCompatActivity implements SegmentListener, ImpressionDataListener {
+public class MainActivity extends AppCompatActivity implements LevelPlayImpressionDataListener {
 
-    private final String _tag = "IronSourceIntegration";
+    private final String _tag = "NeftaPluginIS";
     private final String _appId = "1bb635bc5";
 
     private BannerWrapper _banner;
@@ -55,11 +51,11 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
 
         _banner = new BannerWrapper(this, findViewById(R.id.bannerView), findViewById(R.id.showBanner), findViewById(R.id.closeBanner));
         _interstitial = new InterstitialWrapper(this, findViewById(R.id.loadInterstitial), findViewById(R.id.showInterstitial));
-        _rewarded = new RewardedWrapper(this, findViewById(R.id.loadRewardedVideo), findViewById(R.id.showRewardedVideo));
+        _rewarded = new RewardedWrapper(this, findViewById(R.id.loadRewarded), findViewById(R.id.showRewarded));
 
-        IronSource.setMetaData("is_test_suite", "enable");
-        IronSource.setMetaData("is_deviceid_optout","false");
-        IronSource.setMetaData("is_child_directed","false");
+        LevelPlay.setMetaData("is_test_suite", "enable");
+        LevelPlay.setMetaData("is_deviceid_optout","false");
+        LevelPlay.setMetaData("is_child_directed","false");
         LevelPlayInitRequest initRequest = new LevelPlayInitRequest.Builder(_appId)
                 .build();
         LevelPlayInitListener initListener = new LevelPlayInitListener() {
@@ -76,13 +72,8 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
                 _rewarded.OnReady();
             }
         };
-        IronSource.setSegmentListener(MainActivity.this);
-        IronSource.addImpressionDataListener(MainActivity.this);
+        LevelPlay.addImpressionDataListener(MainActivity.this);
         LevelPlay.init(this, initRequest, initListener);
-
-        if (BuildConfig.DEBUG){
-            IntegrationHelper.validateIntegration(this);
-        }
 
         ((ToggleButton)findViewById(R.id.demand)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -94,31 +85,16 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
         findViewById(R.id.testSuite).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                IronSource.launchTestSuite(MainActivity.this);
+                LevelPlay.launchTestSuite(MainActivity.this);
             }
         });
 
         SetSegment(true);
     }
 
-    public void onSegmentReceived(String segment) {
-        Log.i(_tag, "onSegmentReceived: "+ segment);
-    }
-
-    public void onImpressionSuccess(ImpressionData impression) {
+    @Override
+    public void onImpressionSuccess(@NonNull LevelPlayImpressionData levelPlayImpressionData) {
         Log.i(_tag, "onImpressionSuccess");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        IronSource.onResume(this);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        IronSource.onPause(this);
     }
 
     void Log(String log) {
@@ -127,12 +103,14 @@ public class MainActivity extends AppCompatActivity implements SegmentListener, 
     }
 
     private void SetSegment(boolean isIs) {
-        IronSourceSegment segment = new IronSourceSegment();
+        LevelPlaySegment segment = new LevelPlaySegment();
         if (isIs) {
             segment.setSegmentName("is");
         } else {
             segment.setSegmentName("nefta");
         }
-        IronSource.setSegment(segment);
+        LevelPlay.setSegment(segment);
     }
+
+
 }

@@ -104,24 +104,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <Button
-                    android:id="@+id/loadRewardedVideo"
+                <Switch
+                    android:id="@+id/loadRewarded"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_margin="5dp"
-                    android:background="@drawable/button"
-                    android:foregroundGravity="center"
-                    android:text="Load rewarded video"
-                    android:textColor="#000000" />
+                    android:text="Load Rewarded" />
 
                 <Button
-                    android:id="@+id/showRewardedVideo"
+                    android:id="@+id/showRewarded"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_margin="5dp"
                     android:background="@drawable/button"
                     android:foregroundGravity="center"
-                    android:text="Show rewarded video"
+                    android:text="Show Rewarded"
                     android:textColor="#000000" />
             </TableRow>
 
