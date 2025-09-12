@@ -1,7 +1,5 @@
 package com.nefta.is;
 
-import android.os.Handler;
-import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -20,43 +18,43 @@ import com.unity3d.mediation.banner.LevelPlayBannerAdViewListener;
 
 public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
+    private static final String _adUnitId = "vpkt794d6ruyfwr4";
+
     private MainActivity _activity;
     private ViewGroup _bannerGroup;
     private Button _loadAndShowButton;
     private Button _closeButton;
-    private Handler _handler;
 
     private LevelPlayBannerAdView _banner;
     private AdInsight _usedInsight;
-    private double _requestedFloorPrice;
 
     private void GetInsightsAndLoad() {
-        NeftaPlugin._instance.GetInsights(Insights.BANNER, this::Load, 5);
+        NeftaPlugin._instance.GetInsights(Insights.BANNER, _usedInsight, this::Load, 5);
     }
 
     private void Load(Insights insights) {
-        _requestedFloorPrice = 0;
         _usedInsight = insights._banner;
         if (_usedInsight != null) {
-            _requestedFloorPrice = _usedInsight._floorPrice;
+            LevelPlayBannerAdView.Config config = new LevelPlayBannerAdView.Config.Builder()
+                    .setAdSize(LevelPlayAdSize.BANNER)
+                    .setBidFloor(_usedInsight._floorPrice).build();
+            _banner = new LevelPlayBannerAdView(_activity, _adUnitId, config);
+
+            Log("Loading with floor: "+ _usedInsight._floorPrice);
+        } else {
+            _banner = new LevelPlayBannerAdView(_activity, _adUnitId);
         }
 
-        Log("Loading Banner with floor: "+ _requestedFloorPrice);
-
-        LevelPlayBannerAdView.Config config = new LevelPlayBannerAdView.Config.Builder()
-                .setAdSize(LevelPlayAdSize.BANNER)
-                .setBidFloor(_requestedFloorPrice).build();
-
-        _banner = new LevelPlayBannerAdView(_activity, "vpkt794d6ruyfwr4", config);
         _bannerGroup.addView(_banner);
         _banner.setBannerListener(BannerWrapper.this);
-
         _banner.loadAd();
+
+        NeftaCustomAdapter.OnExternalMediationRequest(_banner, _usedInsight);
     }
 
     @Override
     public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(NeftaCustomAdapter.AdType.Banner, _usedInsight, _requestedFloorPrice, error);
+        NeftaCustomAdapter.OnExternalMediationRequestFailed(error);
 
         Log("onAdLoadFailed " + error);
 
@@ -66,9 +64,16 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
 
     @Override
     public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(NeftaCustomAdapter.AdType.Banner, _usedInsight, _requestedFloorPrice, adInfo);
+        NeftaCustomAdapter.OnExternalMediationRequestLoaded(adInfo);
 
         Log("onAdLoaded " + adInfo);
+    }
+
+    @Override
+    public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
+        NeftaCustomAdapter.OnExternalMediationClick(adInfo);
+
+        Log("onAdClicked " + adInfo);
     }
 
     public BannerWrapper(MainActivity activity, ViewGroup bannerGroup, Button loadAndShowButton, Button closeButton) {
@@ -76,8 +81,6 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
         _bannerGroup = bannerGroup;
         _loadAndShowButton = loadAndShowButton;
         _closeButton = closeButton;
-
-        _handler = new Handler(Looper.getMainLooper());
 
         _loadAndShowButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -122,11 +125,6 @@ public class BannerWrapper implements LevelPlayBannerAdViewListener {
     @Override
     public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
         Log("onAdDisplayed " + adInfo);
-    }
-
-    @Override
-    public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdClicked " + adInfo);
     }
 
     @Override

@@ -111,6 +111,4 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
         }
         LevelPlay.setSegment(segment);
     }
-
-
 }
