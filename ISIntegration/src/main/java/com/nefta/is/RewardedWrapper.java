@@ -3,10 +3,12 @@ package com.nefta.is;
 import android.app.AlertDialog;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
@@ -35,6 +37,7 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
     private MainActivity _activity;
     private final Switch _loadSwitch;
     private Button _showButton;
+    private TextView _status;
     private Handler _handler;
 
     private void StartLoading() {
@@ -123,10 +126,11 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
         Log("onAdClicked " + adInfo);
     }
 
-    public RewardedWrapper(MainActivity activity, Switch loadButton, Button showButton) {
+    public RewardedWrapper(MainActivity activity, Switch loadButton, Button showButton, TextView status) {
         _activity = activity;
         _loadSwitch = loadButton;
         _showButton = showButton;
+        _status = status;
 
         _handler = new Handler(Looper.getMainLooper());
 
@@ -184,6 +188,7 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
     }
 
     public void OnReady() {
+        Log("Ready to load..");
         _loadSwitch.setEnabled(true);
     }
 
@@ -238,7 +243,8 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
         _showButton.setEnabled(_dynamicAdRevenue >= 0 || _defaultAdRevenue >= 0);
     }
 
-    private void Log(String message) {
-        _activity.Log("Rewarded "+ message);
+    private void Log(String log) {
+        _status.setText(log);
+        Log.i("NeftaPluginIS", "Rewarded " + log);
     }
 }

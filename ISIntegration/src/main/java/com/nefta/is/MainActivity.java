@@ -23,10 +23,9 @@ import com.unity3d.mediation.segment.LevelPlaySegment;
 
 public class MainActivity extends AppCompatActivity implements LevelPlayImpressionDataListener {
 
-    private final String _tag = "NeftaPluginIS";
+    private final String TAG = "NeftaPluginIS";
     private final String _appId = "1bb635bc5";
 
-    private BannerWrapper _banner;
     private InterstitialWrapper _interstitial;
     private RewardedWrapper _rewarded;
     private TextView _status;
@@ -47,11 +46,8 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
 
         NeftaCustomAdapter.Init(MainActivity.this, "5658160027140096");
 
-        _status = findViewById(R.id.status);
-
-        _banner = new BannerWrapper(this, findViewById(R.id.bannerView), findViewById(R.id.showBanner), findViewById(R.id.closeBanner));
-        _interstitial = new InterstitialWrapper(this, findViewById(R.id.loadInterstitial), findViewById(R.id.showInterstitial));
-        _rewarded = new RewardedWrapper(this, findViewById(R.id.loadRewarded), findViewById(R.id.showRewarded));
+        _interstitial = new InterstitialWrapper(this, findViewById(R.id.loadInterstitial), findViewById(R.id.showInterstitial), findViewById(R.id.interstitialStatus));
+        _rewarded = new RewardedWrapper(this, findViewById(R.id.loadRewarded), findViewById(R.id.showRewarded), findViewById(R.id.rewardedStatus));
 
         LevelPlay.setMetaData("is_test_suite", "enable");
         LevelPlay.setMetaData("is_deviceid_optout","false");
@@ -61,18 +57,17 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
         LevelPlayInitListener initListener = new LevelPlayInitListener() {
             @Override
             public void onInitFailed(@NonNull LevelPlayInitError error) {
-                Log("OnInitFailed "+ error);
+                Log.i(TAG, "OnInitFailed "+ error);
             }
             @Override
             public void onInitSuccess(LevelPlayConfiguration configuration) {
-                Log("OnInitSuccess "+ configuration);
+                Log.i(TAG, "OnInitSuccess "+ configuration);
 
-                _banner.OnReady();
                 _interstitial.OnReady();
                 _rewarded.OnReady();
             }
         };
-        LevelPlay.addImpressionDataListener(MainActivity.this);
+        LevelPlay.addImpressionDataListener(this);
         LevelPlay.init(this, initRequest, initListener);
 
         ((ToggleButton)findViewById(R.id.demand)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -94,12 +89,7 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
 
     @Override
     public void onImpressionSuccess(@NonNull LevelPlayImpressionData levelPlayImpressionData) {
-        Log.i(_tag, "onImpressionSuccess");
-    }
-
-    void Log(String log) {
-        _status.setText(log);
-        Log.i(_tag, log);
+        Log.i(TAG, "onImpressionSuccess");
     }
 
     private void SetSegment(boolean isIs) {

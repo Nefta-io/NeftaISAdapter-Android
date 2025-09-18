@@ -2,10 +2,12 @@ package com.nefta.is;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
@@ -32,6 +34,7 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
     private MainActivity _activity;
     private final Switch _loadSwitch;
     private Button _showButton;
+    private TextView _status;
     private Handler _handler;
 
     private void StartLoading() {
@@ -121,10 +124,11 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
         Log("onAdClicked " + adInfo);
     }
 
-    public InterstitialWrapper(MainActivity activity, Switch loadButton, Button showButton) {
+    public InterstitialWrapper(MainActivity activity, Switch loadButton, Button showButton, TextView status) {
         _activity = activity;
         _loadSwitch = loadButton;
         _showButton = showButton;
+        _status = status;
 
         _handler = new Handler(Looper.getMainLooper());
 
@@ -182,6 +186,7 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
     }
 
     public void OnReady() {
+        Log("Ready to load..");
         _loadSwitch.setEnabled(true);
     }
 
@@ -211,7 +216,8 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
     }
 
     private void Log(String log) {
-        _activity.Log("Interstitial " + log);
+        _status.setText(log);
+        Log.i("NeftaPluginIS", "Interstitial " + log);
     }
 
     private void UpdateShowButton() {
