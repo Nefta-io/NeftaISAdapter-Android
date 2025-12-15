@@ -1,15 +1,15 @@
 package com.nefta.is;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
-import android.widget.TextView;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.nefta.sdk.InitConfiguration;
 import com.nefta.sdk.NeftaPlugin;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.unity3d.mediation.LevelPlay;
@@ -21,38 +21,28 @@ import com.unity3d.mediation.impression.LevelPlayImpressionData;
 import com.unity3d.mediation.impression.LevelPlayImpressionDataListener;
 import com.unity3d.mediation.segment.LevelPlaySegment;
 
+import org.json.JSONObject;
+
 public class MainActivity extends AppCompatActivity implements LevelPlayImpressionDataListener {
-
     private final String TAG = "NeftaPluginIS";
-    private final String _appId = "1bb635bc5";
-
-    private InterstitialWrapper _interstitial;
-    private RewardedWrapper _rewarded;
-    private TextView _status;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate( savedInstanceState );
         setContentView( R.layout.activity_main );
 
+        DebugServer.Init(this, getIntent());
+
         NeftaPlugin.EnableLogging(true);
-        Intent intent = getIntent();
-        if (intent != null && intent.getExtras() != null) {
-            String override = intent.getStringExtra("override");
-            if (override != null && override.length() > 2) {
-                NeftaPlugin.SetOverride(override);
-            }
-        }
-
         NeftaCustomAdapter.Init(MainActivity.this, "5658160027140096");
-
-        _interstitial = new InterstitialWrapper(this, findViewById(R.id.loadInterstitial), findViewById(R.id.showInterstitial), findViewById(R.id.interstitialStatus));
-        _rewarded = new RewardedWrapper(this, findViewById(R.id.loadRewarded), findViewById(R.id.showRewarded), findViewById(R.id.rewardedStatus));
+        NeftaPlugin.Init(getApplicationContext(), "5643649824063488").OnReady = (InitConfiguration config) -> {
+            Log.i("NeftaPluginIS", "Should bypass Nefta optimization? " + config._skipOptimization);
+        };
 
         LevelPlay.setMetaData("is_test_suite", "enable");
         LevelPlay.setMetaData("is_deviceid_optout","false");
         LevelPlay.setMetaData("is_child_directed","false");
-        LevelPlayInitRequest initRequest = new LevelPlayInitRequest.Builder(_appId)
+        LevelPlayInitRequest initRequest = new LevelPlayInitRequest.Builder(BuildConfig.IS_ID)
                 .build();
         LevelPlayInitListener initListener = new LevelPlayInitListener() {
             @Override
@@ -62,9 +52,6 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
             @Override
             public void onInitSuccess(LevelPlayConfiguration configuration) {
                 Log.i(TAG, "OnInitSuccess "+ configuration);
-
-                _interstitial.OnReady();
-                _rewarded.OnReady();
             }
         };
         LevelPlay.addImpressionDataListener(this);

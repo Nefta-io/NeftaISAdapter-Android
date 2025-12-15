@@ -1,15 +1,20 @@
 package com.nefta.is;
 
+import android.app.Activity;
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
+import android.widget.TableLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.nefta.sdk.AdInsight;
@@ -20,117 +25,183 @@ import com.unity3d.mediation.LevelPlayAdInfo;
 import com.unity3d.mediation.interstitial.LevelPlayInterstitialAd;
 import com.unity3d.mediation.interstitial.LevelPlayInterstitialAdListener;
 
-public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
+public class InterstitialWrapper extends TableLayout {
 
-    private static final String _dynamicAdUnitId = "0u6jgm23ggqso85n";
-    private static final String _defaultAdUnitId = "wrzl86if1sqfxquc";
+    private enum State {
+        Idle,
+        LoadingWithInsights,
+        Loading,
+        Ready
+    }
 
-    private LevelPlayInterstitialAd _dynamicInterstitial;
-    private double _dynamicAdRevenue = -1;
-    private AdInsight _dynamicInsight;
-    private LevelPlayInterstitialAd _defaultInterstitial;
-    private double _defaultAdRevenue = -1;
+    private class AdRequest implements LevelPlayInterstitialAdListener {
+        public final String _adUnitId;
+        public LevelPlayInterstitialAd _interstitial;
+        public State _state = State.Idle;
+        public AdInsight _insight;
+        public double _revenue;
+        public int _consecutiveAdFails;
 
-    private MainActivity _activity;
-    private final Switch _loadSwitch;
+        public AdRequest(String adUnitId) {
+            _adUnitId = adUnitId;
+        }
+
+        @Override
+        public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
+            NeftaCustomAdapter.OnExternalMediationRequestFailed(error);
+
+            Log("Load failed : "+ _adUnitId + ": "+ error);
+
+            _interstitial = null;
+            OnLoadFail();
+        }
+
+        public void OnLoadFail() {
+            _consecutiveAdFails++;
+            RetryLoad();
+
+            OnTrackLoad(false);
+        }
+
+        @Override
+        public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
+            NeftaCustomAdapter.OnExternalMediationRequestLoaded(adInfo);
+
+            Log("Loaded " + _adUnitId + " at: "+ adInfo.getRevenue());
+
+            _insight = null;
+            _consecutiveAdFails = 0;
+            _revenue = adInfo.getRevenue();
+            _state = State.Ready;
+
+            OnTrackLoad(true);
+        }
+
+        private void RetryLoad() {
+            _handler.postDelayed(() -> {
+                _state = State.Idle;
+                RetryLoading();
+            }, 5000);
+        }
+
+        @Override
+        public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
+            NeftaCustomAdapter.OnExternalMediationClick(adInfo);
+
+            Log("onAdClicked " + adInfo);
+        }
+
+        @Override
+        public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo info) {
+            Log("onAdDisplayFailed = " + info + ": " + error);
+
+            RetryLoading();
+        }
+
+        @Override
+        public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdDisplayed " + adInfo);
+        }
+
+        @Override
+        public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdClosed " + adInfo);
+
+            RetryLoading();
+        }
+
+        @Override
+        public void onAdInfoChanged(@NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdInfoChanged " + adInfo);
+        }
+    }
+
+    private AdRequest _adRequestA;
+    private AdRequest _adRequestB;
+    private boolean _isFirstResponseReceived = false;
+
+    private Activity _activity;
+    private Switch _loadSwitch;
     private Button _showButton;
     private TextView _status;
     private Handler _handler;
 
     private void StartLoading() {
-        if (_dynamicInterstitial == null) {
-            GetInsightsAndLoad(null);
-        }
-        if (_defaultInterstitial == null) {
-            LoadDefault();
-        }
+        Load(_adRequestA, _adRequestB._state);
+        Load(_adRequestB, _adRequestA._state);
     }
 
-    private void GetInsightsAndLoad(AdInsight previousinsight) {
-        NeftaPlugin._instance.GetInsights(Insights.INTERSTITIAL, previousinsight, this::LoadWithInsights, 5);
-    }
-
-    private void LoadWithInsights(Insights insights) {
-        _dynamicInsight = insights._interstitial;
-        if (_dynamicInsight != null) {
-            Log("Loading Dynamic with floor: " + _dynamicInsight._floorPrice);
-
-            LevelPlayInterstitialAd.Config config = new LevelPlayInterstitialAd.Config.Builder()
-                    .setBidFloor(_dynamicInsight._floorPrice).build();
-            _dynamicInterstitial = new LevelPlayInterstitialAd(_dynamicAdUnitId, config);
-            _dynamicInterstitial.setListener(InterstitialWrapper.this);
-            _dynamicInterstitial.loadAd();
-
-            NeftaCustomAdapter.OnExternalMediationRequest(_dynamicInterstitial, _dynamicInsight);
+    private void Load(AdRequest request, State otherState) {
+        if (request._state == State.Idle) {
+            if (otherState != State.LoadingWithInsights) {
+                GetInsightsAndLoad(request);
+            } else if (_isFirstResponseReceived) {
+                LoadDefault(request);
+            }
         }
     }
 
-    private void LoadDefault() {
-        Log("Loading Default");
+    private void GetInsightsAndLoad(AdRequest request) {
+        request._state = State.LoadingWithInsights;
 
-        _defaultInterstitial = new LevelPlayInterstitialAd(_defaultAdUnitId);
-        _defaultInterstitial.setListener(this);
-        _defaultInterstitial.loadAd();
+        NeftaPlugin._instance.GetInsights(Insights.INTERSTITIAL, request._insight, (Insights insights) -> {
+            Log("LoadWithInsights: " + insights);
+            if (insights._interstitial != null) {
+                request._insight = insights._interstitial;
+                LevelPlayInterstitialAd.Config config = new LevelPlayInterstitialAd.Config.Builder()
+                        .setBidFloor(request._insight._floorPrice).build();
+                request._interstitial = new LevelPlayInterstitialAd(request._adUnitId, config);
+                request._interstitial.setListener(request);
 
-        NeftaCustomAdapter.OnExternalMediationRequest(_defaultInterstitial);
+                NeftaCustomAdapter.OnExternalMediationRequest(request._interstitial, request._insight);
+
+                Log("Loading "+ request._adUnitId + " as Optimized with floor: " + request._insight._floorPrice);
+                request._interstitial.loadAd();
+            } else {
+                request.OnLoadFail();
+            }
+        }, 5);
+    }
+
+    private void LoadDefault(AdRequest request) {
+        request._state = State.Loading;
+
+        Log("Loading "+ request._adUnitId + " as Default");
+
+        request._interstitial = new LevelPlayInterstitialAd(request._adUnitId);
+        request._interstitial.setListener(request);
+
+        NeftaCustomAdapter.OnExternalMediationRequest(request._interstitial);
+
+        request._interstitial.loadAd();
+    }
+
+    public InterstitialWrapper(Context context) {
+        super(context);
+        if (context instanceof Activity) {
+            _activity = (Activity) context;
+        }
+    }
+
+    public InterstitialWrapper(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        if (context instanceof Activity) {
+            _activity = (Activity) context;
+        }
     }
 
     @Override
-    public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(error);
+    protected void onFinishInflate() {
+        super.onFinishInflate();
 
-        if (_dynamicInterstitial != null && _dynamicInterstitial.getAdId().equals(error.getAdId())) {
-            Log("onAdLoadFailed Dynamic: "+ error);
-
-            _dynamicInterstitial = null;
-            _handler.postDelayed(() -> {
-                if (_loadSwitch.isChecked()) {
-                    GetInsightsAndLoad(_dynamicInsight);
-                }
-            }, 5000);
-        } else {
-            Log("onAdLoadFailed Default: "+ error);
-
-            _defaultInterstitial = null;
-            _handler.postDelayed(() -> {
-                if (_loadSwitch.isChecked()) {
-                    LoadDefault();
-                }
-            }, 5000);
-        }
-    }
-
-    @Override
-    public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(adInfo);
-        if (_dynamicInterstitial != null && _dynamicInterstitial.getAdId().equals(adInfo.getAdId())) {
-            Log("onAdLoaded Dynamic " + adInfo);
-
-            _dynamicAdRevenue = adInfo.getRevenue();
-        } else {
-            Log("onAdLoaded Default " + adInfo);
-
-            _defaultAdRevenue = adInfo.getRevenue();
-        }
-
-        UpdateShowButton();
-        _showButton.setEnabled(true);
-    }
-
-    @Override
-    public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationClick(adInfo);
-
-        Log("onAdClicked " + adInfo);
-    }
-
-    public InterstitialWrapper(MainActivity activity, Switch loadButton, Button showButton, TextView status) {
-        _activity = activity;
-        _loadSwitch = loadButton;
-        _showButton = showButton;
-        _status = status;
+        _loadSwitch = findViewById(R.id.interstitial_load);
+        _showButton = findViewById(R.id.interstitial_show);
+        _status = findViewById(R.id.interstitial_status);
 
         _handler = new Handler(Looper.getMainLooper());
+
+        _adRequestA = new AdRequest("0u6jgm23ggqso85n");
+        _adRequestB = new AdRequest("wrzl86if1sqfxquc");
 
         _loadSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -144,45 +215,52 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
             @Override
             public void onClick(View view) {
                 boolean isShown = false;
-                if (_dynamicAdRevenue >= 0) {
-                    if (_defaultAdRevenue > _dynamicAdRevenue) {
-                        isShown = TryShowDefault();
+                if (_adRequestA._state == State.Ready) {
+                    if (_adRequestB._state == State.Ready && _adRequestB._revenue > _adRequestA._revenue) {
+                        isShown = TryShow(_adRequestB);
                     }
                     if (!isShown) {
-                        isShown = TryShowDynamic();
+                        isShown = TryShow(_adRequestA);
                     }
                 }
-                if (!isShown && _defaultAdRevenue >= 0) {
-                    TryShowDefault();
+                if (!isShown && _adRequestB._state == State.Ready) {
+                    TryShow(_adRequestB);
                 }
                 UpdateShowButton();
             }
         });
-
-        _loadSwitch.setEnabled(false);
         _showButton.setEnabled(false);
     }
 
-    private boolean TryShowDynamic() {
-        boolean isShown = false;
-        if (_dynamicInterstitial.isAdReady()) {
-            _dynamicInterstitial.showAd(_activity);
-            isShown = true;
+    private boolean TryShow(AdRequest request) {
+        request._state = State.Idle;
+        request._revenue = -1;
+
+        if (request._interstitial.isAdReady()) {
+            request._interstitial.showAd(_activity);
+           return true;
         }
-        _dynamicAdRevenue = -1;
-        _dynamicInterstitial = null;
-        return isShown;
+        RetryLoading();
+        return false;
     }
 
-    private boolean TryShowDefault() {
-        boolean isShown = false;
-        if (_defaultInterstitial.isAdReady()) {
-            _defaultInterstitial.showAd(_activity);
-            isShown = true;
+    public void RetryLoading() {
+        if (_loadSwitch.isChecked()) {
+            StartLoading();
         }
-        _defaultAdRevenue = -1;
-        _defaultInterstitial = null;
-        return isShown;
+    }
+
+    public void OnTrackLoad(boolean success) {
+        if (success) {
+            UpdateShowButton();
+        }
+
+        _isFirstResponseReceived = true;
+        RetryLoading();
+    }
+
+    private void UpdateShowButton() {
+        _showButton.setEnabled(_adRequestA._state == State.Ready || _adRequestB._state == State.Ready);
     }
 
     public void OnReady() {
@@ -190,37 +268,8 @@ public class InterstitialWrapper implements LevelPlayInterstitialAdListener {
         _loadSwitch.setEnabled(true);
     }
 
-    @Override
-    public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo info) {
-        Log("onAdDisplayFailed = " + info + ": " + error);
-    }
-
-    @Override
-    public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdDisplayed " + adInfo);
-    }
-
-    @Override
-    public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdClosed " + adInfo);
-
-        // start new load cycle
-        if (_loadSwitch.isChecked()) {
-            StartLoading();
-        }
-    }
-
-    @Override
-    public void onAdInfoChanged(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdInfoChanged " + adInfo);
-    }
-
     private void Log(String log) {
         _status.setText(log);
         Log.i("NeftaPluginIS", "Interstitial " + log);
-    }
-
-    private void UpdateShowButton() {
-        _showButton.setEnabled(_dynamicAdRevenue >= 0 || _defaultAdRevenue >= 0);
     }
 }

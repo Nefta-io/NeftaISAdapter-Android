@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "NeftaISIntegration"
 include ':ISIntegration'
+include ':networksecurityconfig'

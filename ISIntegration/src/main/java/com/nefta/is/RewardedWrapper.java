@@ -1,16 +1,21 @@
 package com.nefta.is;
 
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
+import android.widget.TableLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.nefta.sdk.AdInsight;
@@ -22,117 +27,191 @@ import com.unity3d.mediation.rewarded.LevelPlayReward;
 import com.unity3d.mediation.rewarded.LevelPlayRewardedAd;
 import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener;
 
-public class RewardedWrapper implements LevelPlayRewardedAdListener {
+public class RewardedWrapper extends TableLayout {
 
-    private static final String _dynamicAdUnitId = "x3helvrx8elhig4z";
-    private static final String _defaultAdUnitId = "kftiv52431x91zuk";
+    private enum State {
+        Idle,
+        LoadingWithInsights,
+        Loading,
+        Ready
+    }
 
-    private LevelPlayRewardedAd _dynamicRewarded;
-    private double _dynamicAdRevenue = -1;
-    private AdInsight _dynamicInsight;
-    private LevelPlayRewardedAd _defaultRewarded;
-    private double _defaultAdRevenue = -1;
+    private class AdRequest implements LevelPlayRewardedAdListener {
+        public final String _adUnitId;
+        public LevelPlayRewardedAd _rewarded;
+        public State _state = State.Idle;
+        public AdInsight _insight;
+        public double _revenue;
+        public int _consecutiveAdFails;
+
+        public AdRequest(String adUnitId) {
+            _adUnitId = adUnitId;
+        }
+
+        @Override
+        public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
+            NeftaCustomAdapter.OnExternalMediationRequestFailed(error);
+
+            Log("Load failed : "+ _adUnitId + ": "+ error);
+
+            _rewarded = null;
+            OnLoadFail();
+        }
+
+        public void OnLoadFail() {
+            _consecutiveAdFails++;
+            RetryLoad();
+
+            OnTrackLoad(false);
+        }
+
+        @Override
+        public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
+            NeftaCustomAdapter.OnExternalMediationRequestLoaded(adInfo);
+
+            Log("Loaded " + _adUnitId + " at: "+ adInfo.getRevenue());
+
+            _insight = null;
+            _consecutiveAdFails = 0;
+            _revenue = adInfo.getRevenue();
+            _state = State.Ready;
+
+            OnTrackLoad(true);
+        }
+
+        private void RetryLoad() {
+            _handler.postDelayed(() -> {
+                _state = State.Idle;
+                RetryLoading();
+            }, 5000);
+        }
+
+        @Override
+        public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
+            NeftaCustomAdapter.OnExternalMediationClick(adInfo);
+
+            Log("onAdClicked " + adInfo);
+        }
+
+        @Override
+        public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdDisplayed " + adInfo);
+        }
+
+        @Override
+        public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdDisplayFailed " + adInfo + " : " + error);
+
+            RetryLoading();
+        }
+
+        @Override
+        public void onAdRewarded(@NonNull LevelPlayReward reward, @NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdRewarded "+ adInfo + ": "+ reward);
+            _reward = reward;
+        }
+
+        @Override
+        public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdClosed " + adInfo);
+
+            ShowRewardDialog();
+
+            RetryLoading();
+        }
+
+        @Override
+        public void onAdInfoChanged(@NonNull LevelPlayAdInfo adInfo) {
+            Log("onAdInfoChanged " + adInfo);
+        }
+    }
+
+    private AdRequest _adRequestA;
+    private AdRequest _adRequestB;
+    private boolean _isFirstResponseReceived = false;
     private LevelPlayReward _reward;
 
-    private MainActivity _activity;
-    private final Switch _loadSwitch;
+    private Activity _activity;
+    private Switch _loadSwitch;
     private Button _showButton;
     private TextView _status;
     private Handler _handler;
 
     private void StartLoading() {
-        if (_dynamicRewarded == null) {
-            GetInsightsAndLoad(null);
-        }
-        if (_defaultRewarded == null) {
-            LoadDefault();
-        }
+        Load(_adRequestA, _adRequestB._state);
+        Load(_adRequestB, _adRequestA._state);
     }
 
-    private void GetInsightsAndLoad(AdInsight previousInsight) {
-        NeftaPlugin._instance.GetInsights(Insights.REWARDED, previousInsight, this::LoadWithInsights, 5);
-    }
-
-    private void LoadWithInsights(Insights insights) {
-        _dynamicInsight = insights._rewarded;
-        if (_dynamicInsight != null) {
-            Log("Loading Dynamic with floor: " + _dynamicInsight._floorPrice);
-
-            LevelPlayRewardedAd.Config config = new LevelPlayRewardedAd.Config.Builder()
-                    .setBidFloor(_dynamicInsight._floorPrice).build();
-            _dynamicRewarded = new LevelPlayRewardedAd(_dynamicAdUnitId, config);
-            _dynamicRewarded.setListener(this);
-            _dynamicRewarded.loadAd();
-
-            NeftaCustomAdapter.OnExternalMediationRequest(_dynamicRewarded, _dynamicInsight);
+    private void Load(AdRequest request, State otherState) {
+        if (request._state == State.Idle) {
+            if (otherState != State.LoadingWithInsights) {
+                GetInsightsAndLoad(request);
+            } else if (_isFirstResponseReceived) {
+                LoadDefault(request);
+            }
         }
     }
 
-    private void LoadDefault() {
-        Log("Loading Default");
+    private void GetInsightsAndLoad(AdRequest request) {
+        request._state = State.LoadingWithInsights;
 
-        _defaultRewarded = new LevelPlayRewardedAd(_defaultAdUnitId);
-        _defaultRewarded.setListener(this);
-        _defaultRewarded.loadAd();
+        NeftaPlugin._instance.GetInsights(Insights.REWARDED, request._insight, (Insights insights) -> {
+            Log("LoadWithInsights: " + insights);
+            if (insights._rewarded != null) {
+                request._insight = insights._rewarded;
+                LevelPlayRewardedAd.Config config = new LevelPlayRewardedAd.Config.Builder()
+                        .setBidFloor(request._insight._floorPrice).build();
+                request._rewarded = new LevelPlayRewardedAd(request._adUnitId, config);
+                request._rewarded.setListener(request);
 
-        NeftaCustomAdapter.OnExternalMediationRequest(_defaultRewarded);
+                NeftaCustomAdapter.OnExternalMediationRequest(request._rewarded, request._insight);
+
+                Log("Loading " + request._adUnitId + " as Optimized with floor: " + request._insight._floorPrice);
+                request._rewarded.loadAd();
+            } else {
+                request.OnLoadFail();
+            }
+        },5);
+    }
+
+    private void LoadDefault(AdRequest request) {
+        request._state = State.Loading;
+
+        Log("Loading "+ request._adUnitId + " as Default");
+
+        request._rewarded = new LevelPlayRewardedAd(request._adUnitId);
+        request._rewarded.setListener(request);
+        request._rewarded.loadAd();
+
+        NeftaCustomAdapter.OnExternalMediationRequest(request._rewarded);
+    }
+
+    public RewardedWrapper(Context context) {
+        super(context);
+        if (context instanceof Activity) {
+            _activity = (Activity) context;
+        }
+    }
+
+    public RewardedWrapper(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        if (context instanceof Activity) {
+            _activity = (Activity) context;
+        }
     }
 
     @Override
-    public void onAdLoadFailed(@NonNull LevelPlayAdError error) {
-        NeftaCustomAdapter.OnExternalMediationRequestFailed(error);
+    protected void onFinishInflate() {
+        super.onFinishInflate();
 
-        if (_dynamicRewarded != null && _dynamicRewarded.getAdId().equals(error.getAdId())) {
-            Log("onAdLoadFailed Dynamic: "+ error);
-
-            _dynamicRewarded = null;
-            _handler.postDelayed(() -> {
-                if (_loadSwitch.isChecked()) {
-                    GetInsightsAndLoad(_dynamicInsight);
-                }
-            }, 5000);
-        } else {
-            Log("onAdLoadFailed Default: "+ error);
-
-            _defaultRewarded = null;
-            _handler.postDelayed(() -> {
-                if (_loadSwitch.isChecked()) {
-                    LoadDefault();
-                }
-            }, 5000);
-        }
-    }
-
-    @Override
-    public void onAdLoaded(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationRequestLoaded(adInfo);
-        if (_dynamicRewarded != null && _dynamicRewarded.getAdId().equals(adInfo.getAdId())) {
-            Log("onAdLoaded Dynamic " + adInfo);
-
-            _dynamicAdRevenue = adInfo.getRevenue();
-        } else {
-            Log("onAdLoaded Default " + adInfo);
-
-            _defaultAdRevenue = adInfo.getRevenue();
-        }
-
-        UpdateShowButton();
-    }
-
-    @Override
-    public void onAdClicked(@NonNull LevelPlayAdInfo adInfo) {
-        NeftaCustomAdapter.OnExternalMediationClick(adInfo);
-
-        Log("onAdClicked " + adInfo);
-    }
-
-    public RewardedWrapper(MainActivity activity, Switch loadButton, Button showButton, TextView status) {
-        _activity = activity;
-        _loadSwitch = loadButton;
-        _showButton = showButton;
-        _status = status;
+        _loadSwitch = findViewById(R.id.rewarded_load);
+        _showButton = findViewById(R.id.rewarded_show);
+        _status = findViewById(R.id.rewarded_status);
 
         _handler = new Handler(Looper.getMainLooper());
+
+        _adRequestA = new AdRequest("x3helvrx8elhig4z");
+        _adRequestB = new AdRequest("kftiv52431x91zuk");
 
         _loadSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -146,83 +225,57 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
             @Override
             public void onClick(View view) {
                 boolean isShown = false;
-                if (_dynamicAdRevenue >= 0) {
-                    if (_defaultAdRevenue > _dynamicAdRevenue) {
-                        isShown = TryShowDefault();
+                if (_adRequestA._state == State.Ready) {
+                    if (_adRequestB._state == State.Ready && _adRequestB._revenue > _adRequestA._revenue) {
+                        isShown = TryShow(_adRequestB);
                     }
                     if (!isShown) {
-                        isShown = TryShowDynamic();
+                        isShown = TryShow(_adRequestA);
                     }
                 }
-                if (!isShown && _defaultAdRevenue >= 0) {
-                    TryShowDefault();
+                if (!isShown && _adRequestB._state == State.Ready) {
+                    TryShow(_adRequestB);
                 }
                 UpdateShowButton();
             }
         });
-
-        _loadSwitch.setEnabled(false);
         _showButton.setEnabled(false);
     }
 
-    private boolean TryShowDynamic() {
-        boolean isShown = false;
-        if (_dynamicRewarded.isAdReady()) {
-            _dynamicRewarded.showAd(_activity);
-            isShown = true;
+    private boolean TryShow(AdRequest request) {
+        request._state = State.Idle;
+        request._revenue = -1;
+
+        if (request._rewarded.isAdReady()) {
+            request._rewarded.showAd(_activity);
+            return true;
         }
-        _dynamicAdRevenue = -1;
-        _dynamicRewarded = null;
-        return isShown;
+        RetryLoading();
+        return false;
     }
 
-    private boolean TryShowDefault() {
-        boolean isShown = false;
-        if (_defaultRewarded.isAdReady()) {
-            _defaultRewarded.showAd(_activity);
-            isShown = true;
-        }
-        _defaultAdRevenue = -1;
-        _defaultRewarded = null;
-        return isShown;
-    }
-
-    public void OnReady() {
-        Log("Ready to load..");
-        _loadSwitch.setEnabled(true);
-    }
-
-    @Override
-    public void onAdDisplayed(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdDisplayed " + adInfo);
-    }
-
-    @Override
-    public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdDisplayFailed " + adInfo + " : " + error);
-    }
-
-    @Override
-    public void onAdRewarded(@NonNull LevelPlayReward reward, @NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdRewarded "+ adInfo + ": "+ reward);
-        _reward = reward;
-    }
-
-    @Override
-    public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdClosed " + adInfo);
-
-        ShowRewardDialog();
-
-        // start new load cycle
+    public void RetryLoading() {
         if (_loadSwitch.isChecked()) {
             StartLoading();
         }
     }
 
-    @Override
-    public void onAdInfoChanged(@NonNull LevelPlayAdInfo adInfo) {
-        Log("onAdInfoChanged " + adInfo);
+    public void OnTrackLoad(boolean success) {
+        if (success) {
+            UpdateShowButton();
+        }
+
+        _isFirstResponseReceived = true;
+        RetryLoading();
+    }
+
+    private void UpdateShowButton() {
+        _showButton.setEnabled(_adRequestA._state == State.Ready || _adRequestB._state == State.Ready);
+    }
+
+    public void OnReady() {
+        Log("Ready to load..");
+        _loadSwitch.setEnabled(true);
     }
 
     private void ShowRewardDialog() {
@@ -237,10 +290,6 @@ public class RewardedWrapper implements LevelPlayRewardedAdListener {
 
             _reward = null;
         }
-    }
-
-    private void UpdateShowButton() {
-        _showButton.setEnabled(_dynamicAdRevenue >= 0 || _defaultAdRevenue >= 0);
     }
 
     private void Log(String log) {
