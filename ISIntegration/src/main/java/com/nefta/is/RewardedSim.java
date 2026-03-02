@@ -39,10 +39,11 @@ public class RewardedSim extends TableLayout {
         Idle,
         LoadingWithInsights,
         Loading,
-        Ready
+        Ready,
+        Shown
     }
 
-    private class AdRequest implements LevelPlayRewardedAdListener {
+    private class Track implements LevelPlayRewardedAdListener {
         public final String _adUnitId;
         public SLevelPlayRewardedAd _rewarded;
         public State _state = State.Idle;
@@ -50,7 +51,7 @@ public class RewardedSim extends TableLayout {
         public double _revenue;
         public int _consecutiveAdFails;
 
-        public AdRequest(String adUnitId) {
+        public Track(String adUnitId) {
             _adUnitId = adUnitId;
         }
 
@@ -102,7 +103,7 @@ public class RewardedSim extends TableLayout {
         private void RetryLoad() {
             _handler.postDelayed(() -> {
                 _state = State.Idle;
-                RetryLoading();
+                RetryLoadTracks();
             }, 5000);
         }
 
@@ -117,7 +118,8 @@ public class RewardedSim extends TableLayout {
         public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo info) {
             Log("onAdDisplayFailed = " + info + ": " + error);
 
-            RetryLoading();
+            _state = State.Idle;
+            RetryLoadTracks();
         }
 
         @Override
@@ -135,9 +137,10 @@ public class RewardedSim extends TableLayout {
         public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
             Log("onAdClosed " + adInfo);
 
-            ShowRewardDialog();
+            _state = State.Idle;
+            RetryLoadTracks();
 
-            RetryLoading();
+            ShowRewardDialog();
         }
 
         @Override
@@ -146,8 +149,8 @@ public class RewardedSim extends TableLayout {
         }
     }
 
-    private AdRequest _adRequestA;
-    private AdRequest _adRequestB;
+    private Track _trackA;
+    private Track _trackB;
     private boolean _isFirstResponseReceived = false;
     private LevelPlayReward _reward;
 
@@ -170,44 +173,46 @@ public class RewardedSim extends TableLayout {
 
     private Handler _handler;
 
-    private void StartLoading() {
-        Load(_adRequestA, _adRequestB._state);
-        Load(_adRequestB, _adRequestA._state);
+    private void LoadTracks() {
+        LoadTrack(_trackA, _trackB._state);
+        LoadTrack(_trackB, _trackA._state);
     }
 
-    private void Load(AdRequest request, State otherState) {
-        if (request._state == State.Idle) {
-            if (otherState != State.LoadingWithInsights) {
-                GetInsightsAndLoad(request);
-            } else if (_isFirstResponseReceived) {
-                LoadDefault(request);
+    private void LoadTrack(Track track, State otherState) {
+        if (track._state == State.Idle) {
+            if (otherState == State.LoadingWithInsights || otherState == State.Shown) {
+                if (_isFirstResponseReceived) {
+                    LoadDefault(track);
+                }
+            } else {
+                GetInsightsAndLoad(track);
             }
         }
     }
 
-    private void GetInsightsAndLoad(AdRequest request) {
-        request._state = State.LoadingWithInsights;
+    private void GetInsightsAndLoad(Track track) {
+        track._state = State.LoadingWithInsights;
 
-        NeftaPlugin._instance.GetInsights(Insights.REWARDED, request._insight, (Insights insights) -> {
+        NeftaPlugin._instance.GetInsights(Insights.REWARDED, track._insight, (Insights insights) -> {
             Log("LoadWithInsights: " + insights);
             if (insights._rewarded != null) {
-                request._insight = insights._rewarded;
+                track._insight = insights._rewarded;
                 LevelPlayRewardedAd.Config config = new LevelPlayRewardedAd.Config.Builder()
-                        .setBidFloor(request._insight._floorPrice).build();
-                request._rewarded = new SLevelPlayRewardedAd(request._adUnitId, config);
-                request._rewarded.setListener(request);
+                        .setBidFloor(track._insight._floorPrice).build();
+                track._rewarded = new SLevelPlayRewardedAd(track._adUnitId, config);
+                track._rewarded.setListener(track);
 
-                NeftaCustomAdapter.OnExternalMediationRequest(request._rewarded._i, request._insight);
+                NeftaCustomAdapter.OnExternalMediationRequest(track._rewarded._i, track._insight);
 
-                Log("Loading "+ request._adUnitId + " as Optimized with floor: " + request._insight._floorPrice);
-                request._rewarded.loadAd();
+                Log("Loading "+ track._adUnitId + " as Optimized with floor: " + track._insight._floorPrice);
+                track._rewarded.loadAd();
             } else {
-                request.OnLoadFail();
+                track.OnLoadFail();
             }
         }, 5);
     }
 
-    private void LoadDefault(AdRequest request) {
+    private void LoadDefault(Track request) {
         request._state = State.Loading;
 
         Log("Loading "+ request._adUnitId + " as Default");
@@ -244,30 +249,30 @@ public class RewardedSim extends TableLayout {
 
         _handler = new Handler(Looper.getMainLooper());
 
-        _adRequestA = new AdRequest("Track A");
-        _adRequestB = new AdRequest("Track B");
+        _trackA = new Track("Track A");
+        _trackB = new Track("Track B");
 
         _handler = new Handler(Looper.getMainLooper());
 
         _loadSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
-                StartLoading();
+                LoadTracks();
             }
         });
         _showButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 boolean isShown = false;
-                if (_adRequestA._state == State.Ready) {
-                    if (_adRequestB._state == State.Ready && _adRequestB._revenue > _adRequestA._revenue) {
-                        isShown = TryShow(_adRequestB);
+                if (_trackA._state == State.Ready) {
+                    if (_trackB._state == State.Ready && _trackB._revenue > _trackA._revenue) {
+                        isShown = TryShow(_trackB);
                     }
                     if (!isShown) {
-                        isShown = TryShow(_adRequestA);
+                        isShown = TryShow(_trackA);
                     }
                 }
-                if (!isShown && _adRequestB._state == State.Ready) {
-                    TryShow(_adRequestB);
+                if (!isShown && _trackB._state == State.Ready) {
+                    TryShow(_trackB);
                 }
                 UpdateShowButton();
             }
@@ -276,42 +281,42 @@ public class RewardedSim extends TableLayout {
 
         _aStatus = findViewById(R.id.rewardedSim_statusA);
         _aFill2 = findViewById(R.id.rewardedSim_fill2A);
-        _aFill2.setOnClickListener(v -> SimOnAdLoadedEvent(_adRequestA, true));
+        _aFill2.setOnClickListener(v -> SimOnAdLoadedEvent(_trackA, true));
         _aFill1 = findViewById(R.id.rewardedSim_fill1A);
-        _aFill1.setOnClickListener(v -> SimOnAdLoadedEvent(_adRequestA, false));
+        _aFill1.setOnClickListener(v -> SimOnAdLoadedEvent(_trackA, false));
         _aNoFill = findViewById(R.id.rewardedSim_noFillA);
-        _aNoFill.setOnClickListener(v -> SimOnAdFailedEvent(_adRequestA, 2));
+        _aNoFill.setOnClickListener(v -> SimOnAdFailedEvent(_trackA, 2));
         _aOther = findViewById(R.id.rewardedSim_OtherA);
-        _aOther.setOnClickListener(v -> SimOnAdFailedEvent(_adRequestA, 0));
+        _aOther.setOnClickListener(v -> SimOnAdFailedEvent(_trackA, 0));
         ToggleTrackA(false, true);
 
         _bStatus = findViewById(R.id.rewardedSim_statusB);
         _bFill2 = findViewById(R.id.rewardedSim_fill2B);
-        _bFill2.setOnClickListener(v -> SimOnAdLoadedEvent(_adRequestB, true));
+        _bFill2.setOnClickListener(v -> SimOnAdLoadedEvent(_trackB, true));
         _bFill1 = findViewById(R.id.rewardedSim_fill1B);
-        _bFill1.setOnClickListener(v -> SimOnAdLoadedEvent(_adRequestB, false));
+        _bFill1.setOnClickListener(v -> SimOnAdLoadedEvent(_trackB, false));
         _bNoFill = findViewById(R.id.rewardedSim_noFillB);
-        _bNoFill.setOnClickListener(v -> SimOnAdFailedEvent(_adRequestB, 2));
+        _bNoFill.setOnClickListener(v -> SimOnAdFailedEvent(_trackB, 2));
         _bOther = findViewById(R.id.rewardedSim_OtherB);
-        _bOther.setOnClickListener(v -> SimOnAdFailedEvent(_adRequestB, 0));
+        _bOther.setOnClickListener(v -> SimOnAdFailedEvent(_trackB, 0));
         ToggleTrackB(false, true);
     }
 
-    private boolean TryShow(AdRequest request) {
-        request._state = State.Idle;
+    private boolean TryShow(Track request) {
         request._revenue = -1;
-
         if (request._rewarded.isAdReady()) {
+            request._state = State.Shown;
             request._rewarded.showAd(_activity);
             return true;
         }
-        RetryLoading();
+        request._state = State.Idle;
+        RetryLoadTracks();
         return false;
     }
 
-    public void RetryLoading() {
+    public void RetryLoadTracks() {
         if (_loadSwitch.isChecked()) {
-            StartLoading();
+            LoadTracks();
         }
     }
 
@@ -321,11 +326,11 @@ public class RewardedSim extends TableLayout {
         }
 
         _isFirstResponseReceived = true;
-        RetryLoading();
+        RetryLoadTracks();
     }
 
     private void UpdateShowButton() {
-        _showButton.setEnabled(_adRequestA._state == State.Ready || _adRequestB._state == State.Ready);
+        _showButton.setEnabled(_trackA._state == State.Ready || _trackB._state == State.Ready);
     }
 
     private void Log(String log) {
@@ -362,7 +367,7 @@ public class RewardedSim extends TableLayout {
         public void loadAd() {
             String status = _adUnitId + " loading " + (_floor >= 0 ? " as Optimized" : "as Default");
 
-            if (_adRequestA._adUnitId.equals(_adUnitId)) {
+            if (_trackA._adUnitId.equals(_adUnitId)) {
                 ToggleTrackA(true, true);
                 _aStatus.setText(status);
             } else {
@@ -384,7 +389,7 @@ public class RewardedSim extends TableLayout {
                     }
             );
 
-            if (_adRequestA._adUnitId.equals(_adUnitId)) {
+            if (_trackA._adUnitId.equals(_adUnitId)) {
                 _aStatus.setText("Showing A");
             } else {
                 _bStatus.setText("Showing B");
@@ -443,12 +448,12 @@ public class RewardedSim extends TableLayout {
         _bOther.refreshDrawableState();
     }
 
-    private void SimOnAdLoadedEvent(AdRequest request, boolean isHigh) {
+    private void SimOnAdLoadedEvent(Track request, boolean isHigh) {
         double revenue = isHigh ? 0.002 : 0.001;
         if (request._rewarded._adInfo != null) {
             request._rewarded._adInfo = null;
 
-            if (request == _adRequestA) {
+            if (request == _trackA) {
                 if (isHigh) {
                     _aFill2.setBackgroundResource(R.drawable.button);
                     _aFill2.setEnabled(false);
@@ -499,7 +504,7 @@ public class RewardedSim extends TableLayout {
 
         request._rewarded._impressionData = new LevelPlayImpressionData(impressionData);
 
-        if (request == _adRequestA) {
+        if (request == _trackA) {
             ToggleTrackA(false, false);
             if (isHigh) {
                 _aFill2.setBackgroundResource(R.drawable.button_fill);
@@ -524,8 +529,8 @@ public class RewardedSim extends TableLayout {
         request._rewarded.SimLoad(adInfo);
     }
 
-    private void SimOnAdFailedEvent(AdRequest request, int status) {
-        if (request == _adRequestA) {
+    private void SimOnAdFailedEvent(Track request, int status) {
+        if (request == _trackA) {
             if (status == 2) {
                 _aNoFill.setBackgroundResource(R.drawable.button_no);
             } else {

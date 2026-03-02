@@ -345,7 +345,7 @@
 
             <TableRow>
 
-                <com.nefta.is.InterstitialWrapper
+                <com.nefta.is.Interstitial
                     android:id="@+id/interstitial"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -383,12 +383,12 @@
                             android:text="Initializing.."
                             android:textColor="#000000" />
                     </TableRow>
-                </com.nefta.is.InterstitialWrapper>
+                </com.nefta.is.Interstitial>
             </TableRow>
 
             <TableRow>
 
-                <com.nefta.is.RewardedWrapper
+                <com.nefta.is.Rewarded
                     android:id="@+id/rewarded"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -426,7 +426,7 @@
                             android:text="Initializing.."
                             android:textColor="#000000" />
                     </TableRow>
-                </com.nefta.is.RewardedWrapper>
+                </com.nefta.is.Rewarded>
             </TableRow>
         </TableLayout>
 

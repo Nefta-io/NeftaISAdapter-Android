@@ -27,16 +27,17 @@ import com.unity3d.mediation.rewarded.LevelPlayReward;
 import com.unity3d.mediation.rewarded.LevelPlayRewardedAd;
 import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener;
 
-public class RewardedWrapper extends TableLayout {
+public class Rewarded extends TableLayout {
 
     private enum State {
         Idle,
         LoadingWithInsights,
         Loading,
-        Ready
+        Ready,
+        Shown
     }
 
-    private class AdRequest implements LevelPlayRewardedAdListener {
+    private class Track implements LevelPlayRewardedAdListener {
         public final String _adUnitId;
         public LevelPlayRewardedAd _rewarded;
         public State _state = State.Idle;
@@ -44,7 +45,7 @@ public class RewardedWrapper extends TableLayout {
         public double _revenue;
         public int _consecutiveAdFails;
 
-        public AdRequest(String adUnitId) {
+        public Track(String adUnitId) {
             _adUnitId = adUnitId;
         }
 
@@ -82,7 +83,7 @@ public class RewardedWrapper extends TableLayout {
         private void RetryLoad() {
             _handler.postDelayed(() -> {
                 _state = State.Idle;
-                RetryLoading();
+                RetryLoadTracks();
             }, 5000);
         }
 
@@ -102,7 +103,8 @@ public class RewardedWrapper extends TableLayout {
         public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo adInfo) {
             Log("onAdDisplayFailed " + adInfo + " : " + error);
 
-            RetryLoading();
+            _state = State.Idle;
+            RetryLoadTracks();
         }
 
         @Override
@@ -115,9 +117,10 @@ public class RewardedWrapper extends TableLayout {
         public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
             Log("onAdClosed " + adInfo);
 
-            ShowRewardDialog();
+            _state = State.Idle;
+            RetryLoadTracks();
 
-            RetryLoading();
+            ShowRewardDialog();
         }
 
         @Override
@@ -126,8 +129,8 @@ public class RewardedWrapper extends TableLayout {
         }
     }
 
-    private AdRequest _adRequestA;
-    private AdRequest _adRequestB;
+    private Track _trackA;
+    private Track _trackB;
     private boolean _isFirstResponseReceived = false;
     private LevelPlayReward _reward;
 
@@ -137,63 +140,66 @@ public class RewardedWrapper extends TableLayout {
     private TextView _status;
     private Handler _handler;
 
-    private void StartLoading() {
-        Load(_adRequestA, _adRequestB._state);
-        Load(_adRequestB, _adRequestA._state);
+    private void LoadTracks() {
+        LoadTrack(_trackA, _trackB._state);
+        LoadTrack(_trackB, _trackA._state);
     }
 
-    private void Load(AdRequest request, State otherState) {
-        if (request._state == State.Idle) {
-            if (otherState != State.LoadingWithInsights) {
-                GetInsightsAndLoad(request);
-            } else if (_isFirstResponseReceived) {
-                LoadDefault(request);
+    private void LoadTrack(Track track, State otherState) {
+        if (track._state == State.Idle) {
+            if (otherState == State.LoadingWithInsights || otherState == State.Shown) {
+                if (_isFirstResponseReceived) {
+                    LoadDefault(track);
+                }
+            } else {
+                GetInsightsAndLoad(track);
             }
         }
     }
 
-    private void GetInsightsAndLoad(AdRequest request) {
-        request._state = State.LoadingWithInsights;
+    private void GetInsightsAndLoad(Track track) {
+        track._state = State.LoadingWithInsights;
 
-        NeftaPlugin._instance.GetInsights(Insights.REWARDED, request._insight, (Insights insights) -> {
+        NeftaPlugin._instance.GetInsights(Insights.REWARDED, track._insight, (Insights insights) -> {
             Log("LoadWithInsights: " + insights);
             if (insights._rewarded != null) {
-                request._insight = insights._rewarded;
+                track._insight = insights._rewarded;
                 LevelPlayRewardedAd.Config config = new LevelPlayRewardedAd.Config.Builder()
-                        .setBidFloor(request._insight._floorPrice).build();
-                request._rewarded = new LevelPlayRewardedAd(request._adUnitId, config);
-                request._rewarded.setListener(request);
+                        .setBidFloor(track._insight._floorPrice).build();
+                track._rewarded = new LevelPlayRewardedAd(track._adUnitId, config);
+                track._rewarded.setListener(track);
 
-                NeftaCustomAdapter.OnExternalMediationRequest(request._rewarded, request._insight);
+                NeftaCustomAdapter.OnExternalMediationRequest(track._rewarded, track._insight);
 
-                Log("Loading " + request._adUnitId + " as Optimized with floor: " + request._insight._floorPrice);
-                request._rewarded.loadAd();
+                Log("Loading " + track._adUnitId + " as Optimized with floor: " + track._insight._floorPrice);
+                track._rewarded.loadAd();
             } else {
-                request.OnLoadFail();
+                track.OnLoadFail();
             }
         },5);
     }
 
-    private void LoadDefault(AdRequest request) {
-        request._state = State.Loading;
+    private void LoadDefault(Track track) {
+        track._state = State.Loading;
 
-        Log("Loading "+ request._adUnitId + " as Default");
+        Log("Loading "+ track._adUnitId + " as Default");
 
-        request._rewarded = new LevelPlayRewardedAd(request._adUnitId);
-        request._rewarded.setListener(request);
-        request._rewarded.loadAd();
+        track._rewarded = new LevelPlayRewardedAd(track._adUnitId);
+        track._rewarded.setListener(track);
 
-        NeftaCustomAdapter.OnExternalMediationRequest(request._rewarded);
+        NeftaCustomAdapter.OnExternalMediationRequest(track._rewarded);
+
+        track._rewarded.loadAd();
     }
 
-    public RewardedWrapper(Context context) {
+    public Rewarded(Context context) {
         super(context);
         if (context instanceof Activity) {
             _activity = (Activity) context;
         }
     }
 
-    public RewardedWrapper(Context context, @Nullable AttributeSet attrs) {
+    public Rewarded(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         if (context instanceof Activity) {
             _activity = (Activity) context;
@@ -210,14 +216,14 @@ public class RewardedWrapper extends TableLayout {
 
         _handler = new Handler(Looper.getMainLooper());
 
-        _adRequestA = new AdRequest("x3helvrx8elhig4z");
-        _adRequestB = new AdRequest("kftiv52431x91zuk");
+        _trackA = new Track("x3helvrx8elhig4z");
+        _trackB = new Track("kftiv52431x91zuk");
 
         _loadSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    StartLoading();
+                    LoadTracks();
                 }
             }
         });
@@ -225,16 +231,16 @@ public class RewardedWrapper extends TableLayout {
             @Override
             public void onClick(View view) {
                 boolean isShown = false;
-                if (_adRequestA._state == State.Ready) {
-                    if (_adRequestB._state == State.Ready && _adRequestB._revenue > _adRequestA._revenue) {
-                        isShown = TryShow(_adRequestB);
+                if (_trackA._state == State.Ready) {
+                    if (_trackB._state == State.Ready && _trackB._revenue > _trackA._revenue) {
+                        isShown = TryShow(_trackB);
                     }
                     if (!isShown) {
-                        isShown = TryShow(_adRequestA);
+                        isShown = TryShow(_trackA);
                     }
                 }
-                if (!isShown && _adRequestB._state == State.Ready) {
-                    TryShow(_adRequestB);
+                if (!isShown && _trackB._state == State.Ready) {
+                    TryShow(_trackB);
                 }
                 UpdateShowButton();
             }
@@ -242,21 +248,21 @@ public class RewardedWrapper extends TableLayout {
         _showButton.setEnabled(false);
     }
 
-    private boolean TryShow(AdRequest request) {
-        request._state = State.Idle;
+    private boolean TryShow(Track request) {
         request._revenue = -1;
-
         if (request._rewarded.isAdReady()) {
+            request._state = State.Shown;
             request._rewarded.showAd(_activity);
             return true;
         }
-        RetryLoading();
+        request._state = State.Idle;
+        RetryLoadTracks();
         return false;
     }
 
-    public void RetryLoading() {
+    public void RetryLoadTracks() {
         if (_loadSwitch.isChecked()) {
-            StartLoading();
+            LoadTracks();
         }
     }
 
@@ -266,16 +272,11 @@ public class RewardedWrapper extends TableLayout {
         }
 
         _isFirstResponseReceived = true;
-        RetryLoading();
+        RetryLoadTracks();
     }
 
     private void UpdateShowButton() {
-        _showButton.setEnabled(_adRequestA._state == State.Ready || _adRequestB._state == State.Ready);
-    }
-
-    public void OnReady() {
-        Log("Ready to load..");
-        _loadSwitch.setEnabled(true);
+        _showButton.setEnabled(_trackA._state == State.Ready || _trackB._state == State.Ready);
     }
 
     private void ShowRewardDialog() {

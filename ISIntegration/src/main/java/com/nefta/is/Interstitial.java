@@ -25,16 +25,17 @@ import com.unity3d.mediation.LevelPlayAdInfo;
 import com.unity3d.mediation.interstitial.LevelPlayInterstitialAd;
 import com.unity3d.mediation.interstitial.LevelPlayInterstitialAdListener;
 
-public class InterstitialWrapper extends TableLayout {
+public class Interstitial extends TableLayout {
 
     private enum State {
         Idle,
         LoadingWithInsights,
         Loading,
-        Ready
+        Ready,
+        Shown
     }
 
-    private class AdRequest implements LevelPlayInterstitialAdListener {
+    private class Track implements LevelPlayInterstitialAdListener {
         public final String _adUnitId;
         public LevelPlayInterstitialAd _interstitial;
         public State _state = State.Idle;
@@ -42,7 +43,7 @@ public class InterstitialWrapper extends TableLayout {
         public double _revenue;
         public int _consecutiveAdFails;
 
-        public AdRequest(String adUnitId) {
+        public Track(String adUnitId) {
             _adUnitId = adUnitId;
         }
 
@@ -80,7 +81,7 @@ public class InterstitialWrapper extends TableLayout {
         private void RetryLoad() {
             _handler.postDelayed(() -> {
                 _state = State.Idle;
-                RetryLoading();
+                RetryLoadTracks();
             }, 5000);
         }
 
@@ -95,7 +96,8 @@ public class InterstitialWrapper extends TableLayout {
         public void onAdDisplayFailed(@NonNull LevelPlayAdError error, @NonNull LevelPlayAdInfo info) {
             Log("onAdDisplayFailed = " + info + ": " + error);
 
-            RetryLoading();
+            _state = State.Idle;
+            RetryLoadTracks();
         }
 
         @Override
@@ -107,7 +109,8 @@ public class InterstitialWrapper extends TableLayout {
         public void onAdClosed(@NonNull LevelPlayAdInfo adInfo) {
             Log("onAdClosed " + adInfo);
 
-            RetryLoading();
+            _state = State.Idle;
+            RetryLoadTracks();
         }
 
         @Override
@@ -116,8 +119,8 @@ public class InterstitialWrapper extends TableLayout {
         }
     }
 
-    private AdRequest _adRequestA;
-    private AdRequest _adRequestB;
+    private Track _trackA;
+    private Track _trackB;
     private boolean _isFirstResponseReceived = false;
 
     private Activity _activity;
@@ -126,64 +129,66 @@ public class InterstitialWrapper extends TableLayout {
     private TextView _status;
     private Handler _handler;
 
-    private void StartLoading() {
-        Load(_adRequestA, _adRequestB._state);
-        Load(_adRequestB, _adRequestA._state);
+    private void LoadTracks() {
+        LoadTrack(_trackA, _trackB._state);
+        LoadTrack(_trackB, _trackA._state);
     }
 
-    private void Load(AdRequest request, State otherState) {
-        if (request._state == State.Idle) {
-            if (otherState != State.LoadingWithInsights) {
-                GetInsightsAndLoad(request);
-            } else if (_isFirstResponseReceived) {
-                LoadDefault(request);
+    private void LoadTrack(Track track, State otherState) {
+        if (track._state == State.Idle) {
+            if (otherState == State.LoadingWithInsights || otherState == State.Shown) {
+                if (_isFirstResponseReceived) {
+                    LoadDefault(track);
+                }
+            } else {
+                GetInsightsAndLoad(track);
             }
         }
     }
 
-    private void GetInsightsAndLoad(AdRequest request) {
-        request._state = State.LoadingWithInsights;
+    private void GetInsightsAndLoad(Track track) {
+        track._state = State.LoadingWithInsights;
 
-        NeftaPlugin._instance.GetInsights(Insights.INTERSTITIAL, request._insight, (Insights insights) -> {
+        NeftaPlugin._instance.GetInsights(Insights.INTERSTITIAL, track._insight, (Insights insights) -> {
             Log("LoadWithInsights: " + insights);
             if (insights._interstitial != null) {
-                request._insight = insights._interstitial;
+                track._insight = insights._interstitial;
                 LevelPlayInterstitialAd.Config config = new LevelPlayInterstitialAd.Config.Builder()
-                        .setBidFloor(request._insight._floorPrice).build();
-                request._interstitial = new LevelPlayInterstitialAd(request._adUnitId, config);
-                request._interstitial.setListener(request);
+                        .setBidFloor(track._insight._floorPrice).build();
+                track._interstitial = new LevelPlayInterstitialAd(track._adUnitId, config);
+                track._interstitial.setListener(track);
 
-                NeftaCustomAdapter.OnExternalMediationRequest(request._interstitial, request._insight);
+                NeftaCustomAdapter.OnExternalMediationRequest(track._interstitial, track._insight);
 
-                Log("Loading "+ request._adUnitId + " as Optimized with floor: " + request._insight._floorPrice);
-                request._interstitial.loadAd();
+                Log("Loading "+ track._adUnitId + " as Optimized with floor: " + track._insight._floorPrice);
+                track._interstitial.loadAd();
             } else {
-                request.OnLoadFail();
+                track.OnLoadFail();
             }
         }, 5);
     }
 
-    private void LoadDefault(AdRequest request) {
-        request._state = State.Loading;
+    private void LoadDefault(Track track) {
+        track._state = State.Loading;
 
-        Log("Loading "+ request._adUnitId + " as Default");
+        Log("Loading "+ track._adUnitId + " as Default");
 
-        request._interstitial = new LevelPlayInterstitialAd(request._adUnitId);
-        request._interstitial.setListener(request);
+        track._interstitial = new LevelPlayInterstitialAd(track._adUnitId);
+        track._interstitial.setListener(track);
 
-        NeftaCustomAdapter.OnExternalMediationRequest(request._interstitial);
+        NeftaCustomAdapter.OnExternalMediationRequest(track._interstitial);
 
-        request._interstitial.loadAd();
+        track._interstitial.loadAd();
     }
 
-    public InterstitialWrapper(Context context) {
+    public Interstitial(Context context) {
         super(context);
         if (context instanceof Activity) {
             _activity = (Activity) context;
         }
     }
 
-    public InterstitialWrapper(Context context, @Nullable AttributeSet attrs) {
+    public Interstitial(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         if (context instanceof Activity) {
             _activity = (Activity) context;
@@ -200,14 +205,14 @@ public class InterstitialWrapper extends TableLayout {
 
         _handler = new Handler(Looper.getMainLooper());
 
-        _adRequestA = new AdRequest("0u6jgm23ggqso85n");
-        _adRequestB = new AdRequest("wrzl86if1sqfxquc");
+        _trackA = new Track("0u6jgm23ggqso85n");
+        _trackB = new Track("wrzl86if1sqfxquc");
 
         _loadSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    StartLoading();
+                    LoadTracks();
                 }
             }
         });
@@ -215,16 +220,16 @@ public class InterstitialWrapper extends TableLayout {
             @Override
             public void onClick(View view) {
                 boolean isShown = false;
-                if (_adRequestA._state == State.Ready) {
-                    if (_adRequestB._state == State.Ready && _adRequestB._revenue > _adRequestA._revenue) {
-                        isShown = TryShow(_adRequestB);
+                if (_trackA._state == State.Ready) {
+                    if (_trackB._state == State.Ready && _trackB._revenue > _trackA._revenue) {
+                        isShown = TryShow(_trackB);
                     }
                     if (!isShown) {
-                        isShown = TryShow(_adRequestA);
+                        isShown = TryShow(_trackA);
                     }
                 }
-                if (!isShown && _adRequestB._state == State.Ready) {
-                    TryShow(_adRequestB);
+                if (!isShown && _trackB._state == State.Ready) {
+                    TryShow(_trackB);
                 }
                 UpdateShowButton();
             }
@@ -232,21 +237,21 @@ public class InterstitialWrapper extends TableLayout {
         _showButton.setEnabled(false);
     }
 
-    private boolean TryShow(AdRequest request) {
-        request._state = State.Idle;
+    private boolean TryShow(Track request) {
         request._revenue = -1;
-
         if (request._interstitial.isAdReady()) {
+            request._state = State.Shown;
             request._interstitial.showAd(_activity);
            return true;
         }
-        RetryLoading();
+        request._state = State.Idle;
+        RetryLoadTracks();
         return false;
     }
 
-    public void RetryLoading() {
+    public void RetryLoadTracks() {
         if (_loadSwitch.isChecked()) {
-            StartLoading();
+            LoadTracks();
         }
     }
 
@@ -256,16 +261,11 @@ public class InterstitialWrapper extends TableLayout {
         }
 
         _isFirstResponseReceived = true;
-        RetryLoading();
+        RetryLoadTracks();
     }
 
     private void UpdateShowButton() {
-        _showButton.setEnabled(_adRequestA._state == State.Ready || _adRequestB._state == State.Ready);
-    }
-
-    public void OnReady() {
-        Log("Ready to load..");
-        _loadSwitch.setEnabled(true);
+        _showButton.setEnabled(_trackA._state == State.Ready || _trackB._state == State.Ready);
     }
 
     private void Log(String log) {
