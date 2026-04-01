@@ -43,7 +43,6 @@ public class Rewarded extends TableLayout {
         public State _state = State.Idle;
         public AdInsight _insight;
         public double _revenue;
-        public int _consecutiveAdFails;
 
         public Track(String adUnitId) {
             _adUnitId = adUnitId;
@@ -60,7 +59,6 @@ public class Rewarded extends TableLayout {
         }
 
         public void OnLoadFail() {
-            _consecutiveAdFails++;
             RetryLoad();
 
             OnTrackLoad(false);
@@ -73,7 +71,6 @@ public class Rewarded extends TableLayout {
             Log("Loaded " + _adUnitId + " at: "+ adInfo.getRevenue());
 
             _insight = null;
-            _consecutiveAdFails = 0;
             _revenue = adInfo.getRevenue();
             _state = State.Ready;
 
@@ -84,7 +81,7 @@ public class Rewarded extends TableLayout {
             _handler.postDelayed(() -> {
                 _state = State.Idle;
                 RetryLoadTracks();
-            }, 5000);
+            }, (int)(NeftaCustomAdapter.GetRetryDelayInSeconds(_insight) * 1000));
         }
 
         @Override
@@ -176,7 +173,7 @@ public class Rewarded extends TableLayout {
             } else {
                 track.OnLoadFail();
             }
-        },5);
+        });
     }
 
     private void LoadDefault(Track track) {

@@ -18,6 +18,8 @@ import androidx.annotation.Nullable;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.ironsource.em;
 import com.ironsource.mediationsdk.impressionData.ImpressionData;
+import com.nefta.debug.Callback;
+import com.nefta.debug.NDebug;
 import com.nefta.sdk.AdInsight;
 import com.nefta.sdk.Insights;
 import com.nefta.sdk.NeftaPlugin;
@@ -47,7 +49,6 @@ public class InterstitialSim extends TableLayout {
         public State _state = State.Idle;
         public AdInsight _insight;
         public double _revenue;
-        public int _consecutiveAdFails;
 
         public Track(String adUnitId) {
             _adUnitId = adUnitId;
@@ -64,7 +65,6 @@ public class InterstitialSim extends TableLayout {
         }
 
         public void OnLoadFail() {
-            _consecutiveAdFails++;
             RetryLoad();
 
             OnTrackLoad(false);
@@ -77,7 +77,6 @@ public class InterstitialSim extends TableLayout {
             Log("Loaded " + _adUnitId + " at: "+ adInfo.getRevenue());
 
             _insight = null;
-            _consecutiveAdFails = 0;
             _revenue = adInfo.getRevenue();
             _state = State.Ready;
 
@@ -88,7 +87,7 @@ public class InterstitialSim extends TableLayout {
             _handler.postDelayed(() -> {
                 _state = State.Idle;
                 RetryLoadTracks();
-            }, 5000);
+            }, (int)(NeftaCustomAdapter.GetRetryDelayInSeconds(_insight) * 1000));
         }
 
         @Override
@@ -184,7 +183,7 @@ public class InterstitialSim extends TableLayout {
             } else {
                 request.OnLoadFail();
             }
-        }, 5);
+        });
     }
 
     private void LoadDefault(Track request) {
@@ -354,14 +353,30 @@ public class InterstitialSim extends TableLayout {
         public void showAd(Activity activity) {
             NeftaCustomAdapter.OnExternalMediationImpression(_impressionData);
 
-            SimulatorAd.Instance.Show("Interstitial",
-                    () -> { _listener.onAdDisplayed(_adInfo); },
-                    () -> { _listener.onAdClicked(_adInfo); },
-                    null,
-                    () -> {
-                    _listener.onAdClosed(_adInfo);
-                    _adInfo = null;
-                }
+            NDebug.Open("Interstitial",
+                    activity,
+                    new Callback() {
+                        @Override
+                        public void onShow() {
+                            _listener.onAdDisplayed(_adInfo);
+                        }
+
+                        @Override
+                        public void onClick() {
+                            _listener.onAdClicked(_adInfo);
+                        }
+
+                        @Override
+                        public void onReward() {
+
+                        }
+
+                        @Override
+                        public void onClose() {
+                            _listener.onAdClosed(_adInfo);
+                            _adInfo = null;
+                        }
+                    }
             );
 
             if (_trackA._adUnitId.equals(_adUnitId)) {
@@ -454,6 +469,7 @@ public class InterstitialSim extends TableLayout {
         JSONObject impressionData = new JSONObject();
         try {
             impressionData.put("auctionId", auctionId);
+            impressionData.put("adNetwork", "simulator network");
             impressionData.put("mediationAdUnitId", request._adUnitId);
             impressionData.put("mediationAdUnitName", "");
             impressionData.put("adFormat", adFormat);

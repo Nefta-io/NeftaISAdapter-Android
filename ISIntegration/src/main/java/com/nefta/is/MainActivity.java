@@ -4,11 +4,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.TextView;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.nefta.debug.DebugServer;
 import com.nefta.sdk.InitConfiguration;
 import com.nefta.sdk.NeftaPlugin;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
@@ -21,23 +23,22 @@ import com.unity3d.mediation.impression.LevelPlayImpressionData;
 import com.unity3d.mediation.impression.LevelPlayImpressionDataListener;
 import com.unity3d.mediation.segment.LevelPlaySegment;
 
-import org.json.JSONObject;
-
 public class MainActivity extends AppCompatActivity implements LevelPlayImpressionDataListener {
     private final String TAG = "NeftaPluginIS";
+    private boolean _isSimulator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate( savedInstanceState );
         setContentView( R.layout.activity_main );
 
+        InitUI();
         DebugServer.Init(this, getIntent());
 
         NeftaPlugin.EnableLogging(true);
-        NeftaCustomAdapter.Init(MainActivity.this, "5658160027140096");
-        NeftaPlugin.Init(getApplicationContext(), "5643649824063488").OnReady = (InitConfiguration config) -> {
-            Log.i("NeftaPluginIS", "Should bypass Nefta optimization? " + config._skipOptimization);
-        };
+        NeftaCustomAdapter.InitWithAppId(MainActivity.this, "5657497763315712 ", true, (InitConfiguration config) -> {
+            Log.i("NeftaPluginIS", "Should bypass Nefta optimization? " + config._skipOptimization + " for " + config._nuid);
+        });
 
         LevelPlay.setMetaData("is_test_suite", "enable");
         LevelPlay.setMetaData("is_deviceid_optout","false");
@@ -77,6 +78,23 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
     @Override
     public void onImpressionSuccess(@NonNull LevelPlayImpressionData levelPlayImpressionData) {
         Log.i(TAG, "onImpressionSuccess");
+    }
+
+    private void InitUI() {
+        TextView title = findViewById(R.id.title);
+        title.setText("LevelPlay Integration "+ LevelPlay.getSdkVersion());
+        title.setOnClickListener(v -> ToggleUI(!_isSimulator));
+        ToggleUI(BuildConfig.IS_SIMULATOR);
+    }
+
+    private void ToggleUI(boolean isSimulator) {
+        _isSimulator = isSimulator;
+
+        findViewById(R.id.interstitialSim).setVisibility(_isSimulator ? View.VISIBLE : View.GONE);
+        findViewById(R.id.rewardedSim).setVisibility(_isSimulator ? View.VISIBLE : View.GONE);
+
+        findViewById(R.id.interstitial).setVisibility(_isSimulator ? View.GONE : View.VISIBLE);
+        findViewById(R.id.rewarded).setVisibility(_isSimulator ? View.GONE : View.VISIBLE);
     }
 
     private void SetSegment(boolean isIs) {

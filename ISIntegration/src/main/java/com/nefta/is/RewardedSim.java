@@ -19,6 +19,8 @@ import androidx.annotation.Nullable;
 import com.ironsource.adapters.custom.nefta.NeftaCustomAdapter;
 import com.ironsource.em;
 import com.ironsource.mediationsdk.impressionData.ImpressionData;
+import com.nefta.debug.Callback;
+import com.nefta.debug.NDebug;
 import com.nefta.sdk.AdInsight;
 import com.nefta.sdk.Insights;
 import com.nefta.sdk.NeftaPlugin;
@@ -49,7 +51,6 @@ public class RewardedSim extends TableLayout {
         public State _state = State.Idle;
         public AdInsight _insight;
         public double _revenue;
-        public int _consecutiveAdFails;
 
         public Track(String adUnitId) {
             _adUnitId = adUnitId;
@@ -80,7 +81,6 @@ public class RewardedSim extends TableLayout {
         }
 
         public void OnLoadFail() {
-            _consecutiveAdFails++;
             RetryLoad();
 
             OnTrackLoad(false);
@@ -93,7 +93,6 @@ public class RewardedSim extends TableLayout {
             Log("Loaded " + _adUnitId + " at: "+ adInfo.getRevenue());
 
             _insight = null;
-            _consecutiveAdFails = 0;
             _revenue = adInfo.getRevenue();
             _state = State.Ready;
 
@@ -104,7 +103,7 @@ public class RewardedSim extends TableLayout {
             _handler.postDelayed(() -> {
                 _state = State.Idle;
                 RetryLoadTracks();
-            }, 5000);
+            }, (int)(NeftaCustomAdapter.GetRetryDelayInSeconds(_insight) * 1000));
         }
 
         @Override
@@ -209,7 +208,7 @@ public class RewardedSim extends TableLayout {
             } else {
                 track.OnLoadFail();
             }
-        }, 5);
+        });
     }
 
     private void LoadDefault(Track request) {
@@ -379,13 +378,29 @@ public class RewardedSim extends TableLayout {
         public void showAd(Activity activity) {
             NeftaCustomAdapter.OnExternalMediationImpression(_impressionData);
 
-            SimulatorAd.Instance.Show("Rewarded",
-                    () -> { _listener.onAdDisplayed(_adInfo); },
-                    () -> { _listener.onAdClicked(_adInfo); },
-                    () -> { _listener.onAdRewarded(new LevelPlayReward("sim reward", 1), _adInfo);},
-                    () -> {
-                        _listener.onAdClosed(_adInfo);
-                        _adInfo = null;
+            NDebug.Open("Rewarded",
+                    activity,
+                    new Callback() {
+                        @Override
+                        public void onShow() {
+                            _listener.onAdDisplayed(_adInfo);
+                        }
+
+                        @Override
+                        public void onClick() {
+                            _listener.onAdClicked(_adInfo);
+                        }
+
+                        @Override
+                        public void onReward() {
+                            _listener.onAdRewarded(new LevelPlayReward("sim reward", 1), _adInfo);
+                        }
+
+                        @Override
+                        public void onClose() {
+                            _listener.onAdClosed(_adInfo);
+                            _adInfo = null;
+                        }
                     }
             );
 
@@ -479,6 +494,7 @@ public class RewardedSim extends TableLayout {
         JSONObject impressionData = new JSONObject();
         try {
             impressionData.put("auctionId", auctionId);
+            impressionData.put("adNetwork", "simulator network");
             impressionData.put("mediationAdUnitId", request._adUnitId);
             impressionData.put("mediationAdUnitName", "");
             impressionData.put("adFormat", adFormat);
