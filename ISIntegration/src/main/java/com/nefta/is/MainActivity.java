@@ -36,8 +36,8 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
         DebugServer.Init(this, getIntent());
 
         NeftaPlugin.EnableLogging(true);
-        NeftaCustomAdapter.InitWithAppId(MainActivity.this, "5657497763315712 ", true, (InitConfiguration config) -> {
-            Log.i("NeftaPluginIS", "Should bypass Nefta optimization? " + config._skipOptimization + " for " + config._nuid);
+        NeftaCustomAdapter.InitWithAppId(MainActivity.this, "5657497763315712", true, (InitConfiguration config) -> {
+            Log.i("NeftaPluginIS", "Should bypass Nefta optimization: " + config._skipOptimization + " for: " + config._nuid);
         });
 
         LevelPlay.setMetaData("is_test_suite", "enable");
