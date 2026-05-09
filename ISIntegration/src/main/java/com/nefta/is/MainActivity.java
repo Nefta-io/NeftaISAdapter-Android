@@ -3,9 +3,7 @@ package com.nefta.is;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.TextView;
-import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,11 +19,9 @@ import com.unity3d.mediation.LevelPlayInitListener;
 import com.unity3d.mediation.LevelPlayInitRequest;
 import com.unity3d.mediation.impression.LevelPlayImpressionData;
 import com.unity3d.mediation.impression.LevelPlayImpressionDataListener;
-import com.unity3d.mediation.segment.LevelPlaySegment;
 
 public class MainActivity extends AppCompatActivity implements LevelPlayImpressionDataListener {
     private final String TAG = "NeftaPluginIS";
-    private boolean _isSimulator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +33,7 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
 
         NeftaPlugin.EnableLogging(true);
         NeftaCustomAdapter.InitWithAppId(MainActivity.this, "5657497763315712", true, (InitConfiguration config) -> {
-            Log.i("NeftaPluginIS", "Should skip Nefta optimization: " + config._skipOptimization + " for: " + config._nuid);
+            Log.i("NeftaPluginIS", "Nefta initialized nuid: " + config._nuid);
         });
 
         LevelPlay.setMetaData("is_test_suite", "enable");
@@ -58,21 +54,12 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
         LevelPlay.addImpressionDataListener(this);
         LevelPlay.init(this, initRequest, initListener);
 
-        ((ToggleButton)findViewById(R.id.demand)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isIs) {
-                SetSegment(isIs);
-            }
-        });
-
         findViewById(R.id.testSuite).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 LevelPlay.launchTestSuite(MainActivity.this);
             }
         });
-
-        SetSegment(true);
     }
 
     @Override
@@ -83,27 +70,33 @@ public class MainActivity extends AppCompatActivity implements LevelPlayImpressi
     private void InitUI() {
         TextView title = findViewById(R.id.title);
         title.setText("LevelPlay Integration "+ LevelPlay.getSdkVersion());
-        title.setOnClickListener(v -> ToggleUI(!_isSimulator));
-        ToggleUI(BuildConfig.IS_SIMULATOR);
-    }
 
-    private void ToggleUI(boolean isSimulator) {
-        _isSimulator = isSimulator;
+        findViewById(R.id.control).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                findViewById(R.id.groupView).setVisibility(View.GONE);
 
-        findViewById(R.id.interstitialSim).setVisibility(_isSimulator ? View.VISIBLE : View.GONE);
-        findViewById(R.id.rewardedSim).setVisibility(_isSimulator ? View.VISIBLE : View.GONE);
+                ((InterstitialUi)findViewById(R.id.interstitial)).Init(new InterstitialDefault());
+                ((RewardedUi)findViewById(R.id.rewarded)).Init(new RewardedDefault());
+            }
+        });
+        findViewById(R.id.optimized).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                findViewById(R.id.groupView).setVisibility(View.GONE);
 
-        findViewById(R.id.interstitial).setVisibility(_isSimulator ? View.GONE : View.VISIBLE);
-        findViewById(R.id.rewarded).setVisibility(_isSimulator ? View.GONE : View.VISIBLE);
-    }
+                ((InterstitialUi)findViewById(R.id.interstitial)).Init(new InterstitialOptimized());
+                ((RewardedUi)findViewById(R.id.rewarded)).Init(new RewardedOptimized());
+            }
+        });
+        findViewById(R.id.simulator).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                findViewById(R.id.groupView).setVisibility(View.GONE);
 
-    private void SetSegment(boolean isIs) {
-        LevelPlaySegment segment = new LevelPlaySegment();
-        if (isIs) {
-            segment.setSegmentName("is");
-        } else {
-            segment.setSegmentName("nefta");
-        }
-        LevelPlay.setSegment(segment);
+                findViewById(R.id.interstitialSim).setVisibility(View.VISIBLE);
+                findViewById(R.id.rewardedSim).setVisibility(View.VISIBLE);
+            }
+        });
     }
 }
